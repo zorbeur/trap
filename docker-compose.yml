@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  email-service:
+    build: .
+    container_name: timequant-email-service
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - REDIS_URL=redis://127.0.0.1:6379  # Connects to localhost since Redis is in the same container
+      - TQ_EMAIL_SERVICE_API_KEY=${TQ_EMAIL_SERVICE_API_KEY:-dev-secret-key}
+      - TQ_EMAIL_SENDER_DEFAULT=${TQ_EMAIL_SENDER_DEFAULT:-TimeQuant Platform <notifications@timequant.org>}
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - NODE_ENV=production
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-supersecret}
+    volumes:
+      - custom_templates:/app/data
+    restart: unless-stopped
+
+volumes:
+  custom_templates:

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Alerte Quota: Espace {{ workspace_name }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2>Bonjour,</h2>
+    
+    <p>Ceci est une alerte automatique concernant la consommation des ressources de votre espace de travail <strong>{{ workspace_name }}</strong> sur TimeQuant.</p>
+    
+    <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-left: 5px solid #ffeeba; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Alerte d'utilisation de quota</strong></p>
+        <ul style="margin-bottom: 0;">
+            <li>Type de ressource : <strong>{{ resource_type }}</strong></li>
+            <li>Seuil atteint : <strong>{{ used_percentage }}%</strong></li>
+            <li>Limite totale : <strong>{{ quota_limit }}</strong></li>
+        </ul>
+    </div>
+
+    <p>Pour éviter l'interruption de vos calculs, veuillez vérifier vos quotas ou mettre à jour votre abonnement.</p>
+
+    <p style="margin: 20px 0;">
+        <a href="{{ billing_portal_url }}" style="padding: 10px 15px; background-color: #ffc107; color: #212529; text-decoration: none; border-radius: 5px;">Gérer les quotas et la facturation</a>
+    </p>
+
+    <p>Cordialement,<br>L'équipe TimeQuant MLOps</p>
+</body>
+</html>

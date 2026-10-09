@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration du Fournisseur Email</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="password"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+        button:hover { background: #0056b3; }
+        .alert { padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none; }
+        .alert.success { background: #d4edda; color: #155724; display: block; }
+        .alert.error { background: #f8d7da; color: #721c24; display: block; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #007bff; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            &larr; <a href="/admin/queues">Retour au Dashboard Bull-Board</a>
+        </div>
+        <h1>Configuration d'Envoi (SMTP / SaaS)</h1>
+        
+        <div id="statusMessage"></div>
+
+        <div class="form-group">
+            <label for="providerPreset">Préréglages Fournisseurs :</label>
+            <select id="providerPreset" onchange="applyPreset()">
+                <option value="custom">Personnalisé (Custom SMTP)</option>
+                <option value="sendgrid">SendGrid</option>
+                <option value="mailjet">Mailjet</option>
+                <option value="smtp2go">SMTP2GO</option>
+                <option value="resend">Resend</option>
+                <option value="mailgun">Mailgun</option>
+                <option value="elasticemail">Elastic Email</option>
+                <option value="mailersend">MailerSend</option>
+            </select>
+        </div>
+
+        <form id="configForm" onsubmit="saveConfig(event)">
+            <div class="form-group" style="background: #e9ecef; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <label for="senderName">Nom de l'Expéditeur affiché :</label>
+                <input type="text" id="senderName" placeholder="Ex: TimeQuant Notifications" required>
+                
+                <label for="senderEmail" style="margin-top: 10px;">Adresse Email d'Expédition (Doit être vérifiée chez le fournisseur) :</label>
+                <input type="email" id="senderEmail" placeholder="Ex: no-reply@timequant.org" required>
+            </div>
+
+            <div class="form-group">
+                <label for="host">Serveur (Host) :</label>
+                <input type="text" id="host" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="port">Port :</label>
+                <input type="number" id="port" required>
+            </div>
+
+            <div class="form-group">
+                <label for="user">Nom d'utilisateur (User/API Key) :</label>
+                <input type="text" id="user">
+            </div>
+
+            <div class="form-group">
+                <label for="pass">Mot de passe (Password/Secret) :</label>
+                <input type="password" id="pass">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="secure"> 
+                    Utiliser SSL/TLS direct (Cochez pour port 465, décochez pour 587 STARTTLS)
+                </label>
+            </div>
+
+            <button type="submit">Sauvegarder et Appliquer la Configuration</button>
+        </form>
+
+        <h1 style="margin-top: 50px;">Éditeur de Gabarits (Templates)</h1>
+        <div class="form-group">
+            <label for="templateSelect">Choisir un gabarit à modifier :</label>
+            <select id="templateSelect" onchange="loadTemplate()">
+                <option value="" disabled selected>-- Sélectionnez un template --</option>
+                <option value="simulation_completed">Simulation Terminée</option>
+                <option value="simulation_failed">Simulation Échouée</option>
+                <option value="password_reset">Réinitialisation Mot de passe</option>
+                <option value="security_alert">Alerte de Sécurité</option>
+                <option value="email_verification">Vérification Email</option>
+                <option value="workspace_invitation">Invitation Espace de travail</option>
+                <option value="artifact_shared">Partage d'Artefact</option>
+                <option value="quota_threshold_alert">Alerte Quota</option>
+                <option value="platform_sentinel_alert">Alerte Infrastructure (Sentinel)</option>
+                <option value="hpc_job_status">Statut Job HPC</option>
+            </select>
+        </div>
+
+        <div id="templateStatus" style="font-size: 14px; font-weight: bold; margin-bottom: 10px;"></div>
+
+        <div class="form-group">
+            <textarea id="templateEditor" style="width: 100%; height: 400px; font-family: monospace; font-size: 13px;" disabled></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button id="saveTemplateBtn" onclick="saveTemplate()" disabled>Enregistrer les modifications</button>
+            <button id="resetTemplateBtn" onclick="resetTemplate()" style="background: #dc3545;" disabled>Restaurer l'original</button>
+        </div>
+
+    </div>
+
+    <script>
+        const presets = {
+            sendgrid: { host: 'smtp.sendgrid.net', port: 587, user: 'apikey', secure: false },
+            mailjet: { host: 'in-v3.mailjet.com', port: 587, user: '', secure: false },
+            smtp2go: { host: 'mail.smtp2go.com', port: 2525, user: '', secure: false },
+            resend: { host: 'smtp.resend.com', port: 465, user: 'resend', secure: true },
+            mailgun: { host: 'smtp.mailgun.org', port: 587, user: 'postmaster@votre-domaine.com', secure: false },
+            elasticemail: { host: 'smtp.elasticemail.com', port: 2525, user: '', secure: false },
+            mailersend: { host: 'smtp.mailersend.net', port: 587, user: '', secure: false },
+            custom: { host: '', port: 587, user: '', secure: false }
+        };
+
+        function applyPreset() {
+            const preset = document.getElementById('providerPreset').value;
+            if (preset !== 'custom' && presets[preset]) {
+                document.getElementById('host').value = presets[preset].host;
+                document.getElementById('port').value = presets[preset].port;
+                document.getElementById('user').value = presets[preset].user;
+                document.getElementById('secure').checked = presets[preset].secure;
+            }
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/admin/api/config');
+                const data = await res.json();
+                
+                if (data.host) {
+                    document.getElementById('host').value = data.host;
+                    document.getElementById('port').value = data.port;
+                    document.getElementById('user').value = data.user || '';
+                    document.getElementById('pass').value = data.pass || '';
+                    document.getElementById('secure').checked = data.secure || false;
+                    document.getElementById('senderName').value = data.senderName || 'TimeQuant Platform';
+                    document.getElementById('senderEmail').value = data.senderEmail || 'notifications@timequant.org';
+                }
+            } catch (err) {
+                console.error("Erreur de chargement de la configuration", err);
+            }
+        }
+
+        async function saveConfig(e) {
+            e.preventDefault();
+            const config = {
+                senderName: document.getElementById('senderName').value,
+                senderEmail: document.getElementById('senderEmail').value,
+                host: document.getElementById('host').value,
+                port: parseInt(document.getElementById('port').value, 10),
+                user: document.getElementById('user').value,
+                pass: document.getElementById('pass').value,
+                secure: document.getElementById('secure').checked,
+            };
+
+            const status = document.getElementById('statusMessage');
+            
+            try {
+                const res = await fetch('/admin/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                if (res.ok) {
+                    status.className = 'alert success';
+                    status.innerText = 'Configuration SMTP sauvegardée avec succès !';
+                } else {
+                    throw new Error('Erreur serveur');
+                }
+            } catch (err) {
+                status.className = 'alert error';
+                status.innerText = 'Erreur lors de la sauvegarde SMTP.';
+            }
+        }
+
+        // --- Template Editor Logic ---
+        
+        async function loadTemplate() {
+            const templateId = document.getElementById('templateSelect').value;
+            if (!templateId) return;
+
+            try {
+                const res = await fetch(`/admin/api/templates/${templateId}`);
+                if (!res.ok) throw new Error("Template non trouvé");
+                const data = await res.json();
+                
+                const editor = document.getElementById('templateEditor');
+                editor.value = data.content;
+                editor.disabled = false;
+                
+                document.getElementById('saveTemplateBtn').disabled = false;
+                
+                const statusEl = document.getElementById('templateStatus');
+                if (data.source === 'custom') {
+                    statusEl.innerText = "⚠️ Version Personnalisée (Surcharge active)";
+                    statusEl.style.color = "#d39e00";
+                    document.getElementById('resetTemplateBtn').disabled = false;
+                } else {
+                    statusEl.innerText = "ℹ️ Version Originale (Réglages d'usine)";
+                    statusEl.style.color = "#004085";
+                    document.getElementById('resetTemplateBtn').disabled = true;
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function saveTemplate() {
+            const templateId = document.getElementById('templateSelect').value;
+            const content = document.getElementById('templateEditor').value;
+            if (!templateId) return;
+
+            try {
+                const res = await fetch(`/admin/api/templates/${templateId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (res.ok) {
+                    alert('Template enregistré avec succès ! (Protégé sur le volume disque)');
+                    loadTemplate(); // Reload state
+                } else {
+                    throw new Error("Erreur lors de l'enregistrement");
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function resetTemplate() {
+            const templateId = document.getElementById('templateSelect').value;
+            if (!templateId) return;
+
+            if (!confirm("Voulez-vous vraiment supprimer vos modifications et restaurer le code d'origine de ce template ?")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/admin/api/templates/${templateId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    alert('Template restauré avec succès !');
+                    loadTemplate(); // Reload state
+                } else {
+                    throw new Error("Erreur lors de la restauration");
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // Load config on page init
+        loadConfig();
+    </script>
+</body>
+</html>

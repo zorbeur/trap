@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulation {{ calc_id }} terminée</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2>Bonjour {{ user_name }},</h2>
+    
+    <p>Votre calcul sur TimeQuant pour la formule <strong>{{ formula }}</strong> (moteur: {{ engine }}, fonctionnalité: {{ feature }}) est terminé.</p>
+    
+    <ul>
+        <li><strong>Identifiant de calcul:</strong> {{ calc_id }}</li>
+        <li><strong>Durée:</strong> {{ wall_time_s }} secondes</li>
+        <li><strong>Convergence SCF:</strong> {% if scf_converged %}Oui{% else %}Non{% endif %}</li>
+    </ul>
+
+    {% if key_metrics %}
+    <h3>Métriques clés :</h3>
+    <ul>
+        {% for key, value in key_metrics %}
+        <li><strong>{{ key }}:</strong> {{ value }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <p>
+        <a href="{{ dashboard_url }}" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Voir dans le Dashboard</a>
+    </p>
+
+    {% if download_url %}
+    <p>
+        <a href="{{ download_url }}">Télécharger les résultats directs</a>
+    </p>
+    {% endif %}
+
+    <p>Cordialement,<br>L'équipe TimeQuant</p>
+</body>
+</html>

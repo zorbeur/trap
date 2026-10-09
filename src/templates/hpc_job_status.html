@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Statut du Job HPC: {{ status }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2>Bonjour {{ user_name }},</h2>
+    
+    <p>Le statut de votre job soumis sur l'infrastructure HPC a changé.</p>
+    
+    <ul>
+        <li><strong>Job ID:</strong> {{ job_id }}</li>
+        <li><strong>Nouveau statut:</strong> <strong>{{ status }}</strong></li>
+        <li><strong>Cluster:</strong> {{ cluster_name }}</li>
+        <li><strong>Queue:</strong> {{ queue_name }}</li>
+        <li><strong>Nombre de noeuds:</strong> {{ node_count }}</li>
+    </ul>
+
+    <p>Cordialement,<br>Le système TimeQuant Orchestrator</p>
+</body>
+</html>

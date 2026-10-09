@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Échec de la simulation {{ calc_id }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2>Bonjour {{ user_name }},</h2>
+    
+    <p>Une erreur critique est survenue lors de votre calcul pour la formule <strong>{{ formula }}</strong> (moteur: {{ engine }}, fonctionnalité: {{ feature }}).</p>
+    
+    <ul>
+        <li><strong>Identifiant de calcul:</strong> {{ calc_id }}</li>
+        <li><strong>Cause de l'erreur:</strong> <span style="color: red;">{{ error_cause }}</span></li>
+    </ul>
+
+    <div style="background-color: #f8f9fa; border-left: 4px solid #dc3545; padding: 10px; margin: 20px 0; font-family: monospace;">
+        {{ error_snippet }}
+    </div>
+
+    <p>
+        <a href="{{ log_download_url }}" style="padding: 10px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px;">Télécharger les logs complets</a>
+    </p>
+
+    <p>Besoin d'aide ? Consultez notre <a href="{{ troubleshooting_guide_url }}">guide de dépannage</a>.</p>
+
+    <p>Cordialement,<br>L'équipe TimeQuant</p>
+</body>
+</html>

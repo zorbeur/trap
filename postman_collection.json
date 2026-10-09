@@ -1,0 +1,234 @@
+{
+  "info": {
+    "name": "TimeQuant Email Service",
+    "description": "API calls for the TimeQuant Microservice (Email, Metrics, Webhooks, Admin)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Platform Core API",
+      "item": [
+        {
+          "name": "Send Templated Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer dev-secret-key" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "http://localhost:3000/v1/emails/send-templated",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["v1", "emails", "send-templated"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": {\n    \"email\": \"cherch.lab@universite.fr\",\n    \"name\": \"Dr. Sophie Martin\"\n  },\n  \"template_id\": \"simulation_completed\",\n  \"priority\": \"normal\",\n  \"template_data\": {\n    \"user_name\": \"Dr. Sophie Martin\",\n    \"formula\": \"MoS2\",\n    \"engine\": \"GPAW\",\n    \"feature\": \"ground_state\",\n    \"calc_id\": \"1536\",\n    \"wall_time_s\": 25000,\n    \"scf_converged\": true,\n    \"dashboard_url\": \"https://timequant.lab.org/sessions/WU0FnZF0\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Check Message Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer dev-secret-key" }
+            ],
+            "url": {
+              "raw": "http://localhost:3000/v1/emails/:message_id/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["v1", "emails", ":message_id", "status"],
+              "variable": [
+                { "key": "message_id", "value": "msg_xxx" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Incoming Delivery Webhook (Simulate SaaS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "http://localhost:3000/v1/webhooks/delivery",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["v1", "webhooks", "delivery"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message_id\": \"msg_xxx\",\n  \"event\": \"bounce\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Observability & Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/v1/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["v1", "health"]
+            }
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/metrics",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Admin API (Settings & Templates)",
+      "item": [
+        {
+          "name": "Get SMTP Config",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "password", "value": "supersecret", "type": "string" },
+                { "key": "username", "value": "admin", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/admin/api/config",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["admin", "api", "config"]
+            }
+          }
+        },
+        {
+          "name": "Update SMTP Config",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "password", "value": "supersecret", "type": "string" },
+                { "key": "username", "value": "admin", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "http://localhost:3000/admin/api/config",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["admin", "api", "config"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderName\": \"TimeQuant Platform\",\n  \"senderEmail\": \"notifications@timequant.org\",\n  \"host\": \"smtp.mailtrap.io\",\n  \"port\": 2525,\n  \"user\": \"myuser\",\n  \"pass\": \"mypass\",\n  \"secure\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Template Content",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "password", "value": "supersecret", "type": "string" },
+                { "key": "username", "value": "admin", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/admin/api/templates/:template_id",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["admin", "api", "templates", ":template_id"],
+              "variable": [
+                { "key": "template_id", "value": "simulation_completed" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Save Custom Template",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "password", "value": "supersecret", "type": "string" },
+                { "key": "username", "value": "admin", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "http://localhost:3000/admin/api/templates/:template_id",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["admin", "api", "templates", ":template_id"],
+              "variable": [
+                { "key": "template_id", "value": "simulation_completed" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"<h1>My Custom HTML Override</h1><p>Welcome {{ user_name }}</p>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Restore Default Template",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "password", "value": "supersecret", "type": "string" },
+                { "key": "username", "value": "admin", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "http://localhost:3000/admin/api/templates/:template_id",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["admin", "api", "templates", ":template_id"],
+              "variable": [
+                { "key": "template_id", "value": "simulation_completed" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

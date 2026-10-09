@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>[{{ severity }}] Alerte Sentinel: {{ component_name }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2 style="color: {% if severity == 'CRITICAL' %}#dc3545{% else %}#ffc107{% endif %};">
+        Alerte d'infrastructure TimeQuant (Sentinel)
+    </h2>
+    
+    <ul>
+        <li><strong>Incident ID:</strong> {{ incident_id }}</li>
+        <li><strong>Gravité:</strong> <span style="font-weight: bold; color: {% if severity == 'CRITICAL' %}#dc3545{% else %}#ffc107{% endif %};">{{ severity }}</span></li>
+        <li><strong>Composant affecté:</strong> {{ component_name }}</li>
+    </ul>
+
+    <h3>Détails :</h3>
+    <div style="background-color: #f8f9fa; padding: 10px; border: 1px solid #dee2e6; font-family: monospace;">
+        {{ details }}
+    </div>
+
+    <p style="margin: 20px 0;">
+        <a href="{{ dashboard_url }}" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Accéder au Dashboard d'Incident</a>
+    </p>
+</body>
+</html>

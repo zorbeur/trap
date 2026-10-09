@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Alerte de sécurité TimeQuant</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2>Bonjour {{ user_name }},</h2>
+    
+    <p>Nous avons détecté une nouvelle connexion à votre compte TimeQuant depuis un appareil ou une localisation inhabituelle.</p>
+    
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Adresse IP</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ ip_address }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Localisation estimée</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ location }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Navigateur/Appareil</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ user_agent }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Date et heure</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ timestamp }}</td>
+        </tr>
+    </table>
+
+    <p>Si c'était vous, vous pouvez ignorer cette alerte.</p>
+
+    <p><strong>Si vous ne reconnaissez pas cette activité :</strong><br>
+    Votre compte a peut-être été compromis. Veuillez révoquer toutes vos sessions actives et modifier votre mot de passe immédiatement en cliquant sur le lien ci-dessous :</p>
+    
+    <p style="margin: 20px 0;">
+        <a href="{{ revoke_sessions_link }}" style="padding: 10px 15px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;">Révoquer les sessions et sécuriser mon compte</a>
+    </p>
+
+    <p>Cordialement,<br>L'équipe TimeQuant Sécurité</p>
+</body>
+</html>

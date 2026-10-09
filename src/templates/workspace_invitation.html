@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Invitation à rejoindre un espace de travail TimeQuant</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2>Bonjour,</h2>
+    
+    <p><strong>{{ inviter_name }}</strong> vous a invité(e) à rejoindre l'espace de travail <strong>{{ workspace_name }}</strong> sur la plateforme TimeQuant.</p>
+    
+    <p>On vous a attribué le rôle : <strong>{{ role }}</strong></p>
+
+    <p style="margin: 30px 0;">
+        <a href="{{ join_link }}" style="padding: 12px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Accepter l'invitation</a>
+    </p>
+
+    <p>Cette invitation expirera dans {{ expires_in_days }} jours.</p>
+
+    <p>Cordialement,<br>L'équipe TimeQuant</p>
+</body>
+</html>
