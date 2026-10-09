@@ -23,7 +23,9 @@ createBullBoard({
   serverAdapter,
 });
 
-api.use(helmet());
+api.use(helmet({
+  contentSecurityPolicy: false,
+}));
 api.use(cors());
 api.use(express.json({ limit: '20mb' })); // Allow up to 20mb for base64 attachments
 
