@@ -40,6 +40,7 @@ const getDynamicConfig = async () => {
     }
 
     // Initialize new transporter
+    logger.info(`[Worker] Creating SMTP transporter for host: ${smtpConfig.host}, port: ${smtpConfig.port}, secure: ${smtpConfig.secure}, user: ${smtpConfig.user ? '***' : 'none'}`);
     cachedTransporter = nodemailer.createTransport({
       host: smtpConfig.host,
       port: smtpConfig.port,
