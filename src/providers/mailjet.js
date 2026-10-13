@@ -15,6 +15,24 @@ class MailjetProvider {
     this.fromName = process.env.MAILJET_FROM_NAME || process.env.MAIL_DEFAULT_FROM_NAME || 'TimeQuant Platform';
   }
 
+  updateConfig(cfg = {}) {
+    if (cfg.enabled !== undefined) this.enabled = Boolean(cfg.enabled);
+    if (cfg.apiKey !== undefined && !String(cfg.apiKey).includes('••••')) this.apiKey = cfg.apiKey;
+    if (cfg.secretKey !== undefined && !String(cfg.secretKey).includes('••••')) this.secretKey = cfg.secretKey;
+    if (cfg.fromEmail !== undefined) this.fromEmail = cfg.fromEmail;
+    if (cfg.fromName !== undefined) this.fromName = cfg.fromName;
+  }
+
+  getConfig(masked = true) {
+    return {
+      enabled: this.enabled,
+      apiKey: masked ? (this.apiKey ? `${this.apiKey.slice(0, 4)}••••${this.apiKey.slice(-4)}` : '') : this.apiKey,
+      secretKey: masked ? (this.secretKey ? '••••••••' : '') : this.secretKey,
+      fromEmail: this.fromEmail,
+      fromName: this.fromName,
+    };
+  }
+
   isAvailable() {
     return this.enabled && !!this.apiKey && !!this.secretKey && !this.apiKey.includes('your_mailjet');
   }
@@ -59,3 +77,4 @@ class MailjetProvider {
 }
 
 module.exports = MailjetProvider;
+

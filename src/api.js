@@ -56,6 +56,253 @@ api.get('/admin/settings', authMiddleware, (req, res) => {
 // Utility to validate templateId and prevent path traversal
 const isValidTemplateId = (id) => /^[a-zA-Z0-9_]+$/.test(id);
 
+// ── Admin Endpoints ──────────────────────────────────────────────────
+
+// System Overview & Realtime Metrics
+api.get('/admin/api/overview', authMiddleware, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [statsRows] = await pool.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status='delivered' THEN 1 ELSE 0 END) as delivered,
+        SUM(CASE WHEN status='queued' THEN 1 ELSE 0 END) as queued,
+        SUM(CASE WHEN status='sending' THEN 1 ELSE 0 END) as sending,
+        SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed
+      FROM emails;
+    `);
+
+    const stats = statsRows[0] || { total: 0, delivered: 0, queued: 0, sending: 0, failed: 0 };
+    const deliveredCount = Number(stats.delivered) || 0;
+    const totalCount = Number(stats.total) || 0;
+    const deliveryRate = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 100;
+
+    let counts = { wait: 0, active: 0, delayed: 0, completed: 0, failed: 0 };
+    try {
+      counts = await emailQueue.getJobCounts('wait', 'active', 'delayed', 'completed', 'failed');
+    } catch (_) {}
+
+    const [recentRows] = await pool.query(`
+      SELECT id, recipient_email, template_id, status, provider_used, attempts, error_message, created_at 
+      FROM emails 
+      ORDER BY created_at DESC 
+      LIMIT 6;
+    `);
+
+    const available = providerManager.getAvailableProviders();
+
+    return res.json({
+      stats: {
+        total: totalCount,
+        delivered: deliveredCount,
+        queued: Number(stats.queued) || 0,
+        sending: Number(stats.sending) || 0,
+        failed: Number(stats.failed) || 0,
+        deliveryRate,
+      },
+      queue: counts,
+      providers: {
+        total: Object.keys(providerManager.providers).length,
+        active: available.length,
+        strategy: providerManager.strategy,
+        order: providerManager.order,
+      },
+      recent_activity: recentRows,
+    });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Overview error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Providers Status & Masked Configurations
+api.get('/admin/api/providers', authMiddleware, async (req, res) => {
+  try {
+    const providers = await providerManager.getAllProvidersDetails();
+    res.json({
+      strategy: providerManager.strategy,
+      order: providerManager.order,
+      providers,
+    });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Error getting providers');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update specific provider config
+api.post('/admin/api/providers/:name', authMiddleware, async (req, res) => {
+  try {
+    const name = req.params.name;
+    const updated = await providerManager.updateProviderConfig(name, req.body);
+    res.json({ success: true, provider: updated });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Error updating provider');
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Toggle provider enabled state
+api.post('/admin/api/providers/:name/toggle', authMiddleware, async (req, res) => {
+  try {
+    const name = req.params.name;
+    const enabled = Boolean(req.body.enabled);
+    const updated = await providerManager.toggleProvider(name, enabled);
+    res.json({ success: true, provider: updated });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Error toggling provider');
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Test single provider delivery in real time
+api.post('/admin/api/providers/:name/test', authMiddleware, async (req, res) => {
+  try {
+    const name = req.params.name;
+    const toEmail = req.body.toEmail || req.body.to;
+    if (!toEmail) {
+      return res.status(400).json({ error: 'Adresse email de destination requise pour le test.' });
+    }
+    const result = await providerManager.testProvider(name, toEmail);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, `[Admin API] Error testing provider ${req.params.name}`);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Routing strategy & failover order
+api.get('/admin/api/routing', authMiddleware, (req, res) => {
+  res.json({
+    strategy: providerManager.strategy,
+    order: providerManager.order,
+  });
+});
+
+api.post('/admin/api/routing', authMiddleware, async (req, res) => {
+  try {
+    const { strategy, order } = req.body;
+    const result = await providerManager.updateRouting(strategy, order);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Error updating routing');
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Logs & Email Delivery History
+api.get('/admin/api/logs', authMiddleware, async (req, res) => {
+  try {
+    const pool = getPool();
+    const limit = Math.min(parseInt(req.query.limit || '25', 10), 100);
+    const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
+    const status = req.query.status;
+    const search = req.query.search ? `%${req.query.search}%` : null;
+
+    let whereClauses = [];
+    let params = [];
+
+    if (status && status !== 'all') {
+      whereClauses.push('status = ?');
+      params.push(status);
+    }
+    if (search) {
+      whereClauses.push('(recipient_email LIKE ? OR recipient_name LIKE ? OR template_id LIKE ? OR id LIKE ?)');
+      params.push(search, search, search, search);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const [countRows] = await pool.query(`SELECT COUNT(*) as total FROM emails ${whereSql};`, params);
+    const total = countRows[0]?.total || 0;
+
+    const [rows] = await pool.query(
+      `SELECT id, idempotency_key, recipient_email, recipient_name, template_id, status, provider_used, message_id, attempts, error_message, metadata_json, created_at, updated_at 
+       FROM emails 
+       ${whereSql} 
+       ORDER BY created_at DESC 
+       LIMIT ? OFFSET ?;`,
+      [...params, limit, offset]
+    );
+
+    res.json({ total, limit, offset, items: rows });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Error querying logs');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Retry / Re-enqueue failed or stalled email
+api.post('/admin/api/logs/:id/retry', authMiddleware, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM emails WHERE id = ? LIMIT 1;', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Email non trouvé' });
+
+    const item = rows[0];
+    await pool.query('UPDATE emails SET status = "queued", attempts = 0, error_message = NULL WHERE id = ?;', [item.id]);
+
+    let metadata = {};
+    try {
+      metadata = typeof item.metadata_json === 'string' ? JSON.parse(item.metadata_json) : (item.metadata_json || {});
+    } catch (_) {}
+
+    await emailQueue.add(item.id, {
+      messageId: item.id,
+      payload: {
+        id: item.id,
+        to: { email: item.recipient_email, name: item.recipient_name },
+        template_id: item.template_id,
+        template_data: metadata,
+        priority: 'high',
+      },
+    }, {
+      jobId: `${item.id}_retry_${Date.now()}`,
+      priority: 1,
+    });
+
+    res.json({ success: true, message: 'Email réinséré dans la file de traitement.' });
+  } catch (err) {
+    logger.error({ err }, '[Admin API] Error retrying email');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Legacy single-config route for backward compatibility
+api.get('/admin/api/config', authMiddleware, (req, res) => {
+  const smtp = providerManager.providers.smtp;
+  const cfg = smtp ? smtp.getConfig(true) : {};
+  res.json({
+    host: cfg.host || '',
+    port: cfg.port || 587,
+    user: cfg.user || '',
+    pass: cfg.pass || '',
+    secure: cfg.secure || false,
+    senderName: process.env.MAIL_DEFAULT_FROM_NAME || 'TimeQuant Platform',
+    senderEmail: process.env.MAIL_DEFAULT_FROM_EMAIL || 'notifications@timequant.local',
+  });
+});
+
+api.post('/admin/api/config', authMiddleware, async (req, res) => {
+  try {
+    if (providerManager.providers.smtp) {
+      await providerManager.updateProviderConfig('smtp', {
+        enabled: true,
+        host: req.body.host,
+        port: req.body.port,
+        secure: req.body.secure,
+        user: req.body.user,
+        pass: req.body.pass,
+        fromEmail: req.body.senderEmail,
+        fromName: req.body.senderName,
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get template content (checks custom first, then default)
 api.get('/admin/api/templates/:id', authMiddleware, (req, res) => {
   const templateId = req.params.id;

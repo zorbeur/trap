@@ -18,11 +18,12 @@ class BrevoProvider {
     this.fromEmail = process.env.BREVO_FROM_EMAIL || process.env.MAIL_DEFAULT_FROM_EMAIL || 'notifications@timequant.local';
     this.fromName = process.env.BREVO_FROM_NAME || process.env.MAIL_DEFAULT_FROM_NAME || 'TimeQuant Platform';
 
+    this.smtpSecure = process.env.BREVO_SMTP_SECURE === 'true';
     if (this.smtpUser && this.smtpPass) {
       this.transporter = nodemailer.createTransport({
         host: this.smtpHost,
         port: this.smtpPort,
-        secure: process.env.BREVO_SMTP_SECURE === 'true',
+        secure: this.smtpSecure,
         auth: {
           user: this.smtpUser,
           pass: this.smtpPass,
@@ -32,8 +33,49 @@ class BrevoProvider {
     }
   }
 
+  updateConfig(cfg = {}) {
+    if (cfg.enabled !== undefined) this.enabled = Boolean(cfg.enabled);
+    if (cfg.apiKey !== undefined && !String(cfg.apiKey).includes('••••')) this.apiKey = cfg.apiKey;
+    if (cfg.smtpHost !== undefined) this.smtpHost = cfg.smtpHost;
+    if (cfg.smtpPort !== undefined) this.smtpPort = parseInt(cfg.smtpPort, 10);
+    if (cfg.smtpSecure !== undefined) this.smtpSecure = Boolean(cfg.smtpSecure);
+    if (cfg.smtpUser !== undefined) this.smtpUser = cfg.smtpUser;
+    if (cfg.smtpPass !== undefined && !String(cfg.smtpPass).includes('••••')) this.smtpPass = cfg.smtpPass;
+    if (cfg.fromEmail !== undefined) this.fromEmail = cfg.fromEmail;
+    if (cfg.fromName !== undefined) this.fromName = cfg.fromName;
+
+    if (this.smtpUser && this.smtpPass) {
+      this.transporter = nodemailer.createTransport({
+        host: this.smtpHost,
+        port: this.smtpPort,
+        secure: this.smtpSecure,
+        auth: {
+          user: this.smtpUser,
+          pass: this.smtpPass,
+        },
+        tls: { rejectUnauthorized: false },
+      });
+    } else {
+      this.transporter = null;
+    }
+  }
+
+  getConfig(masked = true) {
+    return {
+      enabled: this.enabled,
+      apiKey: masked ? (this.apiKey ? `${this.apiKey.slice(0, 4)}••••${this.apiKey.slice(-4)}` : '') : this.apiKey,
+      smtpHost: this.smtpHost,
+      smtpPort: this.smtpPort,
+      smtpSecure: this.smtpSecure || false,
+      smtpUser: this.smtpUser,
+      smtpPass: masked ? (this.smtpPass ? '••••••••' : '') : this.smtpPass,
+      fromEmail: this.fromEmail,
+      fromName: this.fromName,
+    };
+  }
+
   isAvailable() {
-    return this.enabled && ((this.smtpUser && this.smtpPass) || this.apiKey);
+    return Boolean(this.enabled && ((this.smtpUser && this.smtpPass) || this.apiKey));
   }
 
   async send({ to, cc, subject, html, text, attachments }) {
@@ -97,3 +139,4 @@ class BrevoProvider {
 }
 
 module.exports = BrevoProvider;
+

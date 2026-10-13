@@ -11,11 +11,15 @@ async function bootstrap() {
     // 1. Initialize dedicated MySQL Database
     await initDatabase();
 
-    // 2. Load worker
+    // 2. Load dynamic provider settings and routing from MySQL
+    const providerManager = require('./providers');
+    await providerManager.loadSettingsFromDb();
+
+    // 3. Load worker
     const workerModule = require('./worker');
     worker = workerModule.worker;
 
-    // 3. Start HTTP server
+    // 4. Start HTTP server
     server = api.listen(config.port, () => {
       logger.info(`[TimeQuant Email Service] API listening on port ${config.port}`);
       logger.info(`[TimeQuant Email Service] Worker is ready and connected to Redis`);

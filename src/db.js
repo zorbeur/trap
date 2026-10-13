@@ -126,6 +126,14 @@ async function initDatabase() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS mailer_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value LONGTEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `);
+
   logger.info('[MySQL] Schema verification & migrations complete. MySQL is READY.');
   return pool;
 }
@@ -137,7 +145,63 @@ function getPool() {
   return pool;
 }
 
+async function getSetting(key, defaultValue = null) {
+  try {
+    const p = getPool();
+    const [rows] = await p.query('SELECT setting_value FROM mailer_settings WHERE setting_key = ? LIMIT 1;', [key]);
+    if (rows.length > 0 && rows[0].setting_value !== null) {
+      try {
+        return JSON.parse(rows[0].setting_value);
+      } catch {
+        return rows[0].setting_value;
+      }
+    }
+  } catch (err) {
+    logger.debug({ err }, `[MySQL] getSetting error for key ${key}`);
+  }
+  return defaultValue;
+}
+
+async function setSetting(key, value) {
+  try {
+    const p = getPool();
+    const serialized = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    await p.query(`
+      INSERT INTO mailer_settings (setting_key, setting_value)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW();
+    `, [key, serialized]);
+    return true;
+  } catch (err) {
+    logger.error({ err }, `[MySQL] setSetting error for key ${key}`);
+    throw err;
+  }
+}
+
+async function getAllSettings() {
+  try {
+    const p = getPool();
+    const [rows] = await p.query('SELECT setting_key, setting_value FROM mailer_settings;');
+    const result = {};
+    for (const r of rows) {
+      try {
+        result[r.setting_key] = JSON.parse(r.setting_value);
+      } catch {
+        result[r.setting_key] = r.setting_value;
+      }
+    }
+    return result;
+  } catch (err) {
+    logger.error({ err }, '[MySQL] getAllSettings error');
+    return {};
+  }
+}
+
 module.exports = {
   initDatabase,
   getPool,
+  getSetting,
+  setSetting,
+  getAllSettings,
 };
+

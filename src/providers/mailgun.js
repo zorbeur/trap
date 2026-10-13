@@ -16,6 +16,26 @@ class MailgunProvider {
     this.fromName = process.env.MAILGUN_FROM_NAME || process.env.MAIL_DEFAULT_FROM_NAME || 'TimeQuant Platform';
   }
 
+  updateConfig(cfg = {}) {
+    if (cfg.enabled !== undefined) this.enabled = Boolean(cfg.enabled);
+    if (cfg.apiKey !== undefined && !String(cfg.apiKey).includes('••••')) this.apiKey = cfg.apiKey;
+    if (cfg.domain !== undefined) this.domain = cfg.domain;
+    if (cfg.region !== undefined) this.region = cfg.region;
+    if (cfg.fromEmail !== undefined) this.fromEmail = cfg.fromEmail;
+    if (cfg.fromName !== undefined) this.fromName = cfg.fromName;
+  }
+
+  getConfig(masked = true) {
+    return {
+      enabled: this.enabled,
+      apiKey: masked ? (this.apiKey ? `${this.apiKey.slice(0, 4)}••••${this.apiKey.slice(-4)}` : '') : this.apiKey,
+      domain: this.domain,
+      region: this.region,
+      fromEmail: this.fromEmail,
+      fromName: this.fromName,
+    };
+  }
+
   isAvailable() {
     return this.enabled && !!this.apiKey && !!this.domain && !this.apiKey.includes('your_mailgun');
   }
@@ -52,3 +72,4 @@ class MailgunProvider {
 }
 
 module.exports = MailgunProvider;
+

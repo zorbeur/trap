@@ -27,6 +27,42 @@ class GenericSmtpProvider {
     }
   }
 
+  updateConfig(cfg = {}) {
+    if (cfg.enabled !== undefined) this.enabled = Boolean(cfg.enabled);
+    if (cfg.host !== undefined) this.host = cfg.host;
+    if (cfg.port !== undefined) this.port = parseInt(cfg.port, 10);
+    if (cfg.secure !== undefined) this.secure = Boolean(cfg.secure);
+    if (cfg.user !== undefined) this.user = cfg.user;
+    if (cfg.pass !== undefined && !String(cfg.pass).includes('••••')) this.pass = cfg.pass;
+    if (cfg.fromEmail !== undefined) this.fromEmail = cfg.fromEmail;
+    if (cfg.fromName !== undefined) this.fromName = cfg.fromName;
+
+    if (this.host) {
+      this.transporter = nodemailer.createTransport({
+        host: this.host,
+        port: this.port,
+        secure: this.secure,
+        auth: (this.user && this.pass) ? { user: this.user, pass: this.pass } : undefined,
+        tls: { rejectUnauthorized: false },
+      });
+    } else {
+      this.transporter = null;
+    }
+  }
+
+  getConfig(masked = true) {
+    return {
+      enabled: this.enabled,
+      host: this.host,
+      port: this.port,
+      secure: this.secure,
+      user: this.user,
+      pass: masked ? (this.pass ? '••••••••' : '') : this.pass,
+      fromEmail: this.fromEmail,
+      fromName: this.fromName,
+    };
+  }
+
   isAvailable() {
     return this.enabled && !!this.host;
   }
@@ -54,3 +90,4 @@ class GenericSmtpProvider {
 }
 
 module.exports = GenericSmtpProvider;
+

@@ -14,6 +14,22 @@ class Smtp2goProvider {
     this.fromName = process.env.SMTP2GO_FROM_NAME || process.env.MAIL_DEFAULT_FROM_NAME || 'TimeQuant Platform';
   }
 
+  updateConfig(cfg = {}) {
+    if (cfg.enabled !== undefined) this.enabled = Boolean(cfg.enabled);
+    if (cfg.apiKey !== undefined && !String(cfg.apiKey).includes('••••')) this.apiKey = cfg.apiKey;
+    if (cfg.fromEmail !== undefined) this.fromEmail = cfg.fromEmail;
+    if (cfg.fromName !== undefined) this.fromName = cfg.fromName;
+  }
+
+  getConfig(masked = true) {
+    return {
+      enabled: this.enabled,
+      apiKey: masked ? (this.apiKey ? `${this.apiKey.slice(0, 4)}••••${this.apiKey.slice(-4)}` : '') : this.apiKey,
+      fromEmail: this.fromEmail,
+      fromName: this.fromName,
+    };
+  }
+
   isAvailable() {
     return this.enabled && !!this.apiKey && !this.apiKey.includes('your_smtp2go');
   }
@@ -54,3 +70,4 @@ class Smtp2goProvider {
 }
 
 module.exports = Smtp2goProvider;
+

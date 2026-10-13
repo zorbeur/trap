@@ -3,271 +3,1920 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration du Fournisseur Email</title>
+    <title>TimeQuant • Mailer Engine Console</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { font-size: 24px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input[type="text"], input[type="password"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
-        button:hover { background: #0056b3; }
-        .alert { padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none; }
-        .alert.success { background: #d4edda; color: #155724; display: block; }
-        .alert.error { background: #f8d7da; color: #721c24; display: block; }
-        .nav-links { margin-bottom: 20px; }
-        .nav-links a { color: #007bff; text-decoration: none; font-weight: bold; }
+        :root {
+            --bg-base: #090d16;
+            --bg-surface: #0f172a;
+            --bg-card: #131d31;
+            --bg-card-hover: #17233c;
+            --bg-input: #090e1a;
+            --border: #1e293b;
+            --border-light: #2d3b55;
+            --border-focus: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-faint: #64748b;
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.25);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.12);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.12);
+            --info: #6366f1;
+            --info-bg: rgba(99, 102, 241, 0.12);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        /* Top Bar */
+        .topbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .brand-cluster {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--primary-glow);
+            color: #031124;
+            font-weight: 800;
+            font-size: 18px;
+        }
+
+        .brand-title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-badge {
+            background: var(--border);
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border-light);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
+
+        .btn-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-link:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        /* Layout Container */
+        .main-layout {
+            max-width: 1380px;
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        /* Overview Stat Tiles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-light);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+
+        .stat-meta {
+            font-size: 12px;
+            color: var(--text-faint);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-rate {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .badge-rate.good { background: var(--success-bg); color: var(--success); }
+        .badge-rate.warn { background: var(--warning-bg); color: var(--warning); }
+        .badge-rate.bad { background: var(--danger-bg); color: var(--danger); }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 18px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-counter {
+            font-size: 11px;
+            padding: 1px 7px;
+            border-radius: 999px;
+            background: var(--border);
+            color: var(--text-muted);
+        }
+
+        .tab-btn.active .tab-counter {
+            background: var(--primary-glow);
+            color: var(--primary);
+        }
+
+        /* Tab Content Panes */
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Providers Section */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .providers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 18px;
+        }
+
+        .provider-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .provider-card:hover {
+            border-color: var(--border-light);
+            background: var(--bg-card);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .provider-card.status-healthy { border-left: 4px solid var(--success); }
+        .provider-card.status-disabled { border-left: 4px solid var(--warning); opacity: 0.85; }
+        .provider-card.status-unconfigured { border-left: 4px solid var(--text-faint); opacity: 0.7; }
+        .provider-card.status-error { border-left: 4px solid var(--danger); }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .provider-name-cluster {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .provider-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .provider-type-tag {
+            font-size: 11px;
+            color: var(--text-faint);
+            font-family: var(--font-mono);
+        }
+
+        .provider-rank-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--border);
+            color: var(--text-muted);
+        }
+
+        .provider-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            min-height: 38px;
+        }
+
+        .provider-health-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 999px;
+            width: fit-content;
+            margin-bottom: 14px;
+        }
+
+        .provider-health-badge.healthy { background: var(--success-bg); color: var(--success); }
+        .provider-health-badge.disabled { background: var(--warning-bg); color: var(--warning); }
+        .provider-health-badge.unconfigured { background: rgba(148, 163, 184, 0.1); color: var(--text-faint); }
+        .provider-health-badge.error { background: var(--danger-bg); color: var(--danger); }
+
+        .provider-metrics-row {
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+
+        .metric-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .metric-label { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .metric-val { font-weight: 700; color: var(--text-main); }
+        .metric-val.success { color: var(--success); }
+        .metric-val.fail { color: var(--danger); }
+
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Switch Toggle */
+        .toggle-wrap {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-right: auto;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 38px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 999px;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        input.toggle-input {
+            display: none;
+        }
+
+        input.toggle-input:checked + .toggle-switch {
+            background: var(--success);
+        }
+
+        input.toggle-input:checked + .toggle-switch::after {
+            transform: translateX(18px);
+        }
+
+        .btn {
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .btn:hover {
+            border-color: var(--border-light);
+            background: var(--bg-card-hover);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #031124;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #7dd3fc;
+            box-shadow: 0 0 12px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        /* Routing Tab */
+        .routing-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .routing-container { grid-template-columns: 1fr; }
+        }
+
+        .panel-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+
+        .strategy-radios {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0 24px 0;
+        }
+
+        .strategy-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            cursor: pointer;
+            background: var(--bg-card);
+            transition: all 0.2s;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .strategy-card:hover {
+            border-color: var(--border-light);
+        }
+
+        .strategy-card.selected {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.05);
+            box-shadow: 0 0 14px var(--primary-glow);
+        }
+
+        .strategy-card input[type="radio"] {
+            margin-top: 4px;
+            accent-color: var(--primary);
+        }
+
+        .strategy-card-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .strategy-card-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .order-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+
+        .order-item:hover {
+            border-color: var(--border-light);
+        }
+
+        .order-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .order-num {
+            width: 24px;
+            height: 24px;
+            background: var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .order-item-title {
+            font-size: 13.5px;
+            font-weight: 600;
+        }
+
+        .order-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .order-btn {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.15s;
+        }
+
+        .order-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .order-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Logs Tab */
+        .logs-toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .input-text, .select-input {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-text:focus, .select-input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .table-wrap {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .badge-status {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            display: inline-block;
+        }
+
+        .badge-status.delivered { background: var(--success-bg); color: var(--success); }
+        .badge-status.queued { background: var(--info-bg); color: var(--info); }
+        .badge-status.sending { background: var(--warning-bg); color: var(--warning); }
+        .badge-status.failed { background: var(--danger-bg); color: var(--danger); }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Modal Dialog */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 580px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 4px;
+        }
+
+        .modal-close:hover { color: var(--text-main); }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: var(--bg-card);
+            border-bottom-left-radius: var(--radius-lg);
+            border-bottom-right-radius: var(--radius-lg);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .form-help {
+            font-size: 11.5px;
+            color: var(--text-faint);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 12px 18px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            animation: slideIn 0.25s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.success { border-left: 4px solid var(--success); color: var(--text-main); }
+        .toast.error { border-left: 4px solid var(--danger); color: var(--text-main); }
+
+        /* Template Editor Specifics */
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .editor-container { grid-template-columns: 1fr; }
+        }
+
+        .code-area {
+            width: 100%;
+            height: 480px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            color: #e2e8f0;
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        .code-area:focus {
+            border-color: var(--border-focus);
+        }
+
+        .preview-iframe {
+            width: 100%;
+            height: 480px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: #ffffff;
+        }
+
+        .variables-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .var-pill {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .var-pill:hover {
+            border-color: var(--primary);
+            background: var(--primary-glow);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="nav-links">
-            &larr; <a href="/admin/queues">Retour au Dashboard Bull-Board</a>
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div class="brand-cluster">
+            <div class="brand-icon">TQ</div>
+            <div>
+                <div class="brand-title">
+                    TimeQuant Mailer Console
+                    <span class="brand-badge">Multi-Provider Engine</span>
+                </div>
+            </div>
         </div>
-        <h1>Configuration d'Envoi (SMTP / SaaS)</h1>
-        
-        <div id="statusMessage"></div>
+        <div class="topbar-actions">
+            <div class="status-pill" id="globalStatusPill">
+                <span class="status-dot"></span>
+                <span id="globalStatusText">Moteur en ligne (MySQL & Redis OK)</span>
+            </div>
+            <a href="/admin/queues" target="_blank" class="btn-link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+                Files BullMQ
+            </a>
+            <button class="btn btn-secondary btn-sm" onclick="refreshAll()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                Actualiser
+            </button>
+        </div>
+    </header>
 
-        <div class="form-group">
-            <label for="providerPreset">Préréglages Fournisseurs :</label>
-            <select id="providerPreset" onchange="applyPreset()">
-                <option value="custom">Personnalisé (Custom SMTP)</option>
-                <option value="sendgrid">SendGrid</option>
-                <option value="mailjet">Mailjet</option>
-                <option value="smtp2go">SMTP2GO</option>
-                <option value="resend">Resend</option>
-                <option value="mailgun">Mailgun</option>
-                <option value="elasticemail">Elastic Email</option>
-                <option value="mailersend">MailerSend</option>
-            </select>
+    <main class="main-layout">
+
+        <!-- STATS TILES -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span>Emails Traités</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div class="stat-value" id="statTotalEmails">--</div>
+                <div class="stat-meta">
+                    <span class="badge-rate good" id="statDeliveryRate">--% Livrés</span>
+                    <span>sur l'ensemble de la plateforme</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span>File d'attente active</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="stat-value" id="statBacklog">--</div>
+                <div class="stat-meta" id="statQueueDetail">0 en attente • 0 actifs</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span>Échecs & Erreurs</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <div class="stat-value" id="statFailed">0</div>
+                <div class="stat-meta">Échecs définitifs après réessais</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span>Fournisseurs Actifs</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="stat-value" id="statActiveProviders">-- / 8</div>
+                <div class="stat-meta" id="statRoutingMode">Stratégie : Priorité Failover</div>
+            </div>
+        </section>
+
+        <!-- NAVIGATION TABS -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-providers')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Fournisseurs (Providers)
+                <span class="tab-counter" id="providersCount">8</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-routing')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                Routage & Failover
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-logs')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Historique & Logs
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-templates')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Gabarits d'Emails
+            </button>
+        </nav>
+
+        <!-- TAB 1: PROVIDERS -->
+        <div id="tab-providers" class="tab-pane active">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Gestion des 8 Fournisseurs Agrégués</h2>
+                    <p class="section-subtitle">Activez, configurez et testez en direct chaque fournisseur d'expédition sans redémarrage.</p>
+                </div>
+            </div>
+            <div class="providers-grid" id="providersContainer">
+                <!-- Dynamically loaded cards -->
+            </div>
         </div>
 
-        <form id="configForm" onsubmit="saveConfig(event)">
-            <div class="form-group" style="background: #e9ecef; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-                <label for="senderName">Nom de l'Expéditeur affiché :</label>
-                <input type="text" id="senderName" placeholder="Ex: TimeQuant Notifications" required>
-                
-                <label for="senderEmail" style="margin-top: 10px;">Adresse Email d'Expédition (Doit être vérifiée chez le fournisseur) :</label>
-                <input type="email" id="senderEmail" placeholder="Ex: no-reply@timequant.org" required>
+        <!-- TAB 2: ROUTING & FAILOVER -->
+        <div id="tab-routing" class="tab-pane">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Politique de Routage & Tolérance aux Pannes</h2>
+                    <p class="section-subtitle">Définissez la stratégie globale et l'ordre de priorité dans lequel TimeQuant bascule en cas d'indisponibilité.</p>
+                </div>
+                <button class="btn btn-primary" onclick="saveRoutingConfig()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Enregistrer la Stratégie
+                </button>
             </div>
 
-            <div class="form-group">
-                <label for="host">Serveur (Host) :</label>
-                <input type="text" id="host" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="port">Port :</label>
-                <input type="number" id="port" required>
-            </div>
+            <div class="routing-container">
+                <!-- Left: Strategy Selector -->
+                <div class="panel-box">
+                    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">1. Stratégie d'Aiguillage</h3>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">Sélectionnez comment le moteur distribue les emails sortants :</p>
 
-            <div class="form-group">
-                <label for="user">Nom d'utilisateur (User/API Key) :</label>
-                <input type="text" id="user">
+                    <div class="strategy-radios">
+                        <label class="strategy-card" id="cardStrategyPriority" onclick="selectStrategy('priority')">
+                            <input type="radio" name="strategyChoice" value="priority" id="radioPriority" checked>
+                            <div>
+                                <div class="strategy-card-title">Priorité avec Failover Intelligent (Recommandé)</div>
+                                <div class="strategy-card-desc">
+                                    Envoie systématiquement via le 1er fournisseur opérationnel de la liste. Si celui-ci échoue (quota atteint, incident réseau ou rejet API), le moteur bascule immédiatement et automatiquement sur le second fournisseur configuré, sans perte de message.
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="strategy-card" id="cardStrategyRoundRobin" onclick="selectStrategy('round_robin')">
+                            <input type="radio" name="strategyChoice" value="round_robin" id="radioRoundRobin">
+                            <div>
+                                <div class="strategy-card-title">Répartition de Charge (Round-Robin)</div>
+                                <div class="strategy-card-desc">
+                                    Alterne les envois équitablement entre tous les fournisseurs actifs configurés. Si l'un des fournisseurs rencontre une anomalie, le message est immédiatement routé vers le suivant dans la chaîne.
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style="background: var(--bg-base); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                        <strong style="color: var(--primary);">Résilience Multi-Provider :</strong> 
+                        Chaque message rejeté par un fournisseur est consigné avec son motif d'erreur exact dans la base MySQL dédiée, et transmis au suivant dans la seconde sans intervention humaine.
+                    </div>
+                </div>
+
+                <!-- Right: Priority Order List -->
+                <div class="panel-box">
+                    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">2. Ordre de Priorité / Chaîne de Secours</h3>
+                    <p style="font-size: 12.5px; color: var(--text-muted);">Réorganisez la hiérarchie de basculement à l'aide des flèches :</p>
+
+                    <div class="order-list" id="routingOrderList">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
             </div>
-
-            <div class="form-group">
-                <label for="pass">Mot de passe (Password/Secret) :</label>
-                <input type="password" id="pass">
-            </div>
-
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="secure"> 
-                    Utiliser SSL/TLS direct (Cochez pour port 465, décochez pour 587 STARTTLS)
-                </label>
-            </div>
-
-            <button type="submit">Sauvegarder et Appliquer la Configuration</button>
-        </form>
-
-        <h1 style="margin-top: 50px;">Éditeur de Gabarits (Templates)</h1>
-        <div class="form-group">
-            <label for="templateSelect">Choisir un gabarit à modifier :</label>
-            <select id="templateSelect" onchange="loadTemplate()">
-                <option value="" disabled selected>-- Sélectionnez un template --</option>
-                <option value="simulation_completed">Simulation Terminée</option>
-                <option value="simulation_failed">Simulation Échouée</option>
-                <option value="password_reset">Réinitialisation Mot de passe</option>
-                <option value="security_alert">Alerte de Sécurité</option>
-                <option value="email_verification">Vérification Email</option>
-                <option value="workspace_invitation">Invitation Espace de travail</option>
-                <option value="artifact_shared">Partage d'Artefact</option>
-                <option value="quota_threshold_alert">Alerte Quota</option>
-                <option value="platform_sentinel_alert">Alerte Infrastructure (Sentinel)</option>
-                <option value="hpc_job_status">Statut Job HPC</option>
-            </select>
         </div>
 
-        <div id="templateStatus" style="font-size: 14px; font-weight: bold; margin-bottom: 10px;"></div>
+        <!-- TAB 3: LOGS & HISTORY -->
+        <div id="tab-logs" class="tab-pane">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Journal d'Expédition & Traçabilité</h2>
+                    <p class="section-subtitle">Consultez chaque email envoyé, son statut de délivrance et le fournisseur utilisé.</p>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <textarea id="templateEditor" style="width: 100%; height: 400px; font-family: monospace; font-size: 13px;" disabled></textarea>
+            <div class="logs-toolbar">
+                <input type="text" id="logSearchInput" class="input-text" placeholder="Rechercher par email, template, ID..." style="min-width: 280px;" onkeydown="if(event.key==='Enter') loadLogs(0)">
+                <select id="logStatusSelect" class="select-input" onchange="loadLogs(0)">
+                    <option value="all">Tous les statuts</option>
+                    <option value="delivered">Livrés (delivered)</option>
+                    <option value="queued">En file d'attente (queued)</option>
+                    <option value="sending">En cours d'envoi (sending)</option>
+                    <option value="failed">Échoués (failed)</option>
+                </select>
+                <button class="btn btn-secondary" onclick="loadLogs(0)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Filtrer
+                </button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date / Heure</th>
+                            <th>Destinataire</th>
+                            <th>Template</th>
+                            <th>Statut</th>
+                            <th>Fournisseur</th>
+                            <th>Tentatives</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">Chargement des journaux...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <span id="paginationInfo">Affichage 0 sur 0</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btnPrevLogs" class="btn btn-secondary btn-sm" onclick="changeLogsPage(-1)">Précédent</button>
+                    <button id="btnNextLogs" class="btn btn-secondary btn-sm" onclick="changeLogsPage(1)">Suivant</button>
+                </div>
+            </div>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            <button id="saveTemplateBtn" onclick="saveTemplate()" disabled>Enregistrer les modifications</button>
-            <button id="resetTemplateBtn" onclick="resetTemplate()" style="background: #dc3545;" disabled>Restaurer l'original</button>
+        <!-- TAB 4: TEMPLATES -->
+        <div id="tab-templates" class="tab-pane">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Gabarits d'Emails Transactionnels</h2>
+                    <p class="section-subtitle">Personnalisez le HTML des messages envoyés aux utilisateurs et prévisualisez le rendu en direct.</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="resetCurrentTemplate()" id="btnResetTemplate" disabled style="color: var(--danger);">
+                        Restaurer Défaut
+                    </button>
+                    <button class="btn btn-primary" onclick="saveCurrentTemplate()" id="btnSaveTemplate" disabled>
+                        Enregistrer les Modifications
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label class="form-label" for="templateSelector">Choisir un gabarit à éditer :</label>
+                <select id="templateSelector" class="select-input" style="width: 100%; max-width: 480px; margin-top: 6px;" onchange="loadSelectedTemplate()">
+                    <option value="" disabled selected>-- Sélectionnez un gabarit --</option>
+                    <option value="email_verification">Vérification d'Email (Code OTP de sécurité)</option>
+                    <option value="password_reset">Réinitialisation Mot de passe (Code OTP)</option>
+                    <option value="simulation_completed">Simulation Terminée avec Succès</option>
+                    <option value="simulation_failed">Simulation Échouée (Alerte technique)</option>
+                    <option value="security_alert">Alerte de Sécurité / Nouvelle Connexion</option>
+                    <option value="workspace_invitation">Invitation à un Espace de travail</option>
+                    <option value="artifact_shared">Partage d'Artefact Scientifique</option>
+                    <option value="quota_threshold_alert">Alerte de Dépassement de Quota</option>
+                    <option value="platform_sentinel_alert">Alerte Sentinelle Infrastructure</option>
+                    <option value="hpc_job_status">Notification de Statut Job HPC</option>
+                </select>
+            </div>
+
+            <div id="templateMetaBox" style="display: none; margin-bottom: 14px; background: var(--bg-surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                <div style="font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Variables dynamiques disponibles (cliquez pour insérer) :</div>
+                <div class="variables-pills" id="templateVariablesPills"></div>
+            </div>
+
+            <div class="editor-container">
+                <div>
+                    <textarea id="templateEditor" class="code-area" placeholder="Sélectionnez un gabarit pour afficher son code source HTML..." disabled oninput="updateLivePreview()"></textarea>
+                </div>
+                <div>
+                    <iframe id="templatePreviewIframe" class="preview-iframe" title="Aperçu du gabarit"></iframe>
+                </div>
+            </div>
         </div>
 
+    </main>
+
+    <!-- MODAL CONFIGURATION PROVIDER -->
+    <div class="modal-overlay" id="configModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span id="modalProviderTitle">Configuration du Fournisseur</span>
+                </div>
+                <button class="modal-close" onclick="closeConfigModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalProviderBody">
+                <!-- Dynamically generated fields -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeConfigModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="submitProviderConfig()">Enregistrer les Paramètres</button>
+            </div>
+        </div>
     </div>
 
+    <!-- MODAL TEST PROVIDER -->
+    <div class="modal-overlay" id="testModal">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>Tester le Fournisseur : <span id="testProviderName" style="color: var(--primary);">--</span></span>
+                </div>
+                <button class="modal-close" onclick="closeTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: var(--text-muted);">
+                    Envoyez un email réel de contrôle pour vérifier vos identifiants, votre clé API et la délivrabilité immédiate.
+                </p>
+                <div class="form-group">
+                    <label class="form-label" for="testToEmail">Adresse Email du Destinataire :</label>
+                    <input type="email" id="testToEmail" class="input-text" placeholder="ex: votre-email@domaine.com" required>
+                </div>
+                <div id="testResultBox" style="display: none; padding: 12px; border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.4;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeTestModal()">Fermer</button>
+                <button class="btn btn-primary" id="btnRunTest" onclick="submitProviderTest()">
+                    Lancer l'Envoi Test
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAILS LOG -->
+    <div class="modal-overlay" id="logDetailModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">Détails de l'Expédition</div>
+                <button class="modal-close" onclick="closeLogModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="logDetailBody">
+                <!-- Log detail content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeLogModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <script>
-        const presets = {
-            sendgrid: { host: 'smtp.sendgrid.net', port: 587, user: 'apikey', secure: false },
-            mailjet: { host: 'in-v3.mailjet.com', port: 587, user: '', secure: false },
-            smtp2go: { host: 'mail.smtp2go.com', port: 2525, user: '', secure: false },
-            resend: { host: 'smtp.resend.com', port: 465, user: 'resend', secure: true },
-            mailgun: { host: 'smtp.mailgun.org', port: 587, user: 'postmaster@votre-domaine.com', secure: false },
-            elasticemail: { host: 'smtp.elasticemail.com', port: 2525, user: '', secure: false },
-            mailersend: { host: 'smtp.mailersend.net', port: 587, user: '', secure: false },
-            custom: { host: '', port: 587, user: '', secure: false }
+        // State
+        let currentProviders = [];
+        let currentStrategy = 'priority';
+        let currentOrder = [];
+        let currentEditingProviderId = null;
+        let testingProviderId = null;
+        let logsOffset = 0;
+        const logsLimit = 20;
+
+        const TEMPLATE_VARS_MAP = {
+            email_verification: ['{{otp_code}}', '{{user_name}}', '{{expiry_minutes}}', '{{email}}'],
+            password_reset: ['{{otp_code}}', '{{user_name}}', '{{expiry_minutes}}', '{{email}}'],
+            simulation_completed: ['{{user_name}}', '{{simulation_name}}', '{{job_id}}', '{{wall_time_s}}', '{{results_url}}'],
+            simulation_failed: ['{{user_name}}', '{{simulation_name}}', '{{job_id}}', '{{error_summary}}'],
+            security_alert: ['{{user_name}}', '{{ip_address}}', '{{timestamp}}', '{{location}}'],
+            workspace_invitation: ['{{inviter_name}}', '{{workspace_name}}', '{{invite_url}}'],
+            artifact_shared: ['{{sharer_name}}', '{{artifact_title}}', '{{artifact_url}}'],
+            quota_threshold_alert: ['{{user_name}}', '{{current_usage}}', '{{quota_limit}}'],
+            platform_sentinel_alert: ['{{node_name}}', '{{incident_type}}', '{{timestamp}}'],
+            hpc_job_status: ['{{job_name}}', '{{cluster_id}}', '{{status}}'],
         };
 
-        function applyPreset() {
-            const preset = document.getElementById('providerPreset').value;
-            if (preset !== 'custom' && presets[preset]) {
-                document.getElementById('host').value = presets[preset].host;
-                document.getElementById('port').value = presets[preset].port;
-                document.getElementById('user').value = presets[preset].user;
-                document.getElementById('secure').checked = presets[preset].secure;
-            }
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tabs .tab-btn').forEach(el => el.classList.remove('active'));
+            
+            const targetPane = document.getElementById(tabId);
+            if (targetPane) targetPane.classList.add('active');
+
+            const btnIndex = ['tab-providers', 'tab-routing', 'tab-logs', 'tab-templates'].indexOf(tabId);
+            const btns = document.querySelectorAll('.nav-tabs .tab-btn');
+            if (btns[btnIndex]) btns[btnIndex].classList.add('active');
+
+            if (tabId === 'tab-logs') loadLogs(0);
         }
 
-        async function loadConfig() {
+        // Toasts
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✓' : '⚠'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3800);
+        }
+
+        // Overview Loader
+        async function loadOverview() {
             try {
-                const res = await fetch('/admin/api/config');
+                const res = await fetch('/admin/api/overview');
                 const data = await res.json();
-                
-                if (data.host) {
-                    document.getElementById('host').value = data.host;
-                    document.getElementById('port').value = data.port;
-                    document.getElementById('user').value = data.user || '';
-                    document.getElementById('pass').value = data.pass || '';
-                    document.getElementById('secure').checked = data.secure || false;
-                    document.getElementById('senderName').value = data.senderName || 'TimeQuant Platform';
-                    document.getElementById('senderEmail').value = data.senderEmail || 'notifications@timequant.org';
+                if (data.stats) {
+                    document.getElementById('statTotalEmails').textContent = data.stats.total.toLocaleString();
+                    const rateBadge = document.getElementById('statDeliveryRate');
+                    rateBadge.textContent = `${data.stats.deliveryRate}% Livrés`;
+                    rateBadge.className = `badge-rate ${data.stats.deliveryRate >= 95 ? 'good' : (data.stats.deliveryRate >= 80 ? 'warn' : 'bad')}`;
+                    document.getElementById('statFailed').textContent = data.stats.failed.toLocaleString();
+                }
+                if (data.queue) {
+                    const backlog = (data.queue.wait || 0) + (data.queue.delayed || 0);
+                    document.getElementById('statBacklog').textContent = backlog;
+                    document.getElementById('statQueueDetail').textContent = `${data.queue.wait || 0} en attente • ${data.queue.active || 0} actifs`;
+                }
+                if (data.providers) {
+                    document.getElementById('statActiveProviders').textContent = `${data.providers.active} / ${data.providers.total}`;
+                    document.getElementById('statRoutingMode').textContent = `Stratégie : ${data.providers.strategy === 'round_robin' ? 'Round-Robin' : 'Priorité Failover'}`;
                 }
             } catch (err) {
-                console.error("Erreur de chargement de la configuration", err);
+                console.error('Erreur chargement overview', err);
             }
         }
 
-        async function saveConfig(e) {
-            e.preventDefault();
-            const config = {
-                senderName: document.getElementById('senderName').value,
-                senderEmail: document.getElementById('senderEmail').value,
-                host: document.getElementById('host').value,
-                port: parseInt(document.getElementById('port').value, 10),
-                user: document.getElementById('user').value,
-                pass: document.getElementById('pass').value,
-                secure: document.getElementById('secure').checked,
+        // Providers Loader
+        async function loadProviders() {
+            try {
+                const res = await fetch('/admin/api/providers');
+                const data = await res.json();
+                currentProviders = data.providers || [];
+                currentStrategy = data.strategy || 'priority';
+                currentOrder = data.order || [];
+
+                document.getElementById('providersCount').textContent = currentProviders.length;
+                renderProvidersGrid();
+                renderRoutingOrder();
+                updateStrategyRadios();
+            } catch (err) {
+                console.error('Erreur chargement providers', err);
+                showToast('Impossible de charger la liste des fournisseurs', 'error');
+            }
+        }
+
+        function renderProvidersGrid() {
+            const container = document.getElementById('providersContainer');
+            container.innerHTML = '';
+
+            currentProviders.forEach(p => {
+                const card = document.createElement('div');
+                card.className = `provider-card status-${p.health}`;
+                
+                let healthLabel = 'Opérationnel';
+                if (p.health === 'disabled') healthLabel = 'Désactivé';
+                else if (p.health === 'unconfigured') healthLabel = 'Non configuré';
+                else if (p.health === 'error') healthLabel = 'En anomalie';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="card-top">
+                            <div class="provider-name-cluster">
+                                <div class="provider-title">
+                                    ${p.name}
+                                    ${p.website ? `<a href="${p.website}" target="_blank" style="color: var(--text-faint);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg></a>` : ''}
+                                </div>
+                                <span class="provider-type-tag">${p.type}</span>
+                            </div>
+                            <span class="provider-rank-pill">Rang #${p.priorityRank}</span>
+                        </div>
+
+                        <div class="provider-health-badge ${p.health}">
+                            <span style="font-size: 9px;">●</span>
+                            <span>${healthLabel}</span>
+                        </div>
+
+                        <div class="provider-desc">${p.description}</div>
+
+                        <div class="provider-metrics-row">
+                            <div class="metric-cell">
+                                <span class="metric-label">Succès</span>
+                                <span class="metric-val success">${p.metrics.success_count || 0}</span>
+                            </div>
+                            <div class="metric-cell">
+                                <span class="metric-label">Échecs</span>
+                                <span class="metric-val ${p.metrics.fail_count > 0 ? 'fail' : ''}">${p.metrics.fail_count || 0}</span>
+                            </div>
+                            <div class="metric-cell" style="text-align: right;">
+                                <span class="metric-label">Dernier Envoi</span>
+                                <span class="metric-val" style="font-size: 11px;">${p.metrics.last_success_at ? new Date(p.metrics.last_success_at).toLocaleTimeString() : 'Aucun'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-actions">
+                        <label class="toggle-wrap">
+                            <input type="checkbox" class="toggle-input" ${p.enabled ? 'checked' : ''} onchange="toggleProviderState('${p.id}', this.checked)">
+                            <div class="toggle-switch"></div>
+                            <span>${p.enabled ? 'Activé' : 'Inactif'}</span>
+                        </label>
+
+                        <button class="btn btn-secondary btn-sm" onclick="openTestModal('${p.id}')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Tester
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="openConfigModal('${p.id}')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            Configurer
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function toggleProviderState(providerId, isEnabled) {
+            try {
+                const res = await fetch(`/admin/api/providers/${providerId}/toggle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: isEnabled }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Fournisseur '${providerId}' ${isEnabled ? 'activé' : 'désactivé'}.`);
+                    loadProviders();
+                    loadOverview();
+                } else {
+                    showToast(data.error || 'Erreur lors du basculement', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // Configuration Modal
+        function openConfigModal(providerId) {
+            currentEditingProviderId = providerId;
+            const p = currentProviders.find(x => x.id === providerId);
+            if (!p) return;
+
+            document.getElementById('modalProviderTitle').textContent = `Paramètres : ${p.name}`;
+            const body = document.getElementById('modalProviderBody');
+            body.innerHTML = '';
+
+            // Enabled toggle
+            const enableGroup = document.createElement('div');
+            enableGroup.className = 'form-group';
+            enableGroup.innerHTML = `
+                <label class="toggle-wrap">
+                    <input type="checkbox" id="cfg_enabled" class="toggle-input" ${p.enabled ? 'checked' : ''}>
+                    <div class="toggle-switch"></div>
+                    <span style="font-weight: 600; color: var(--text-main);">Activer ce fournisseur dans la chaîne de distribution</span>
+                </label>
+            `;
+            body.appendChild(enableGroup);
+
+            // Dynamic fields
+            p.fields.forEach(f => {
+                const grp = document.createElement('div');
+                grp.className = 'form-group';
+                const currentVal = p.config[f.name] !== undefined ? p.config[f.name] : (f.default !== undefined ? f.default : '');
+
+                if (f.type === 'checkbox') {
+                    grp.innerHTML = `
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">
+                            <input type="checkbox" id="cfg_${f.name}" ${currentVal ? 'checked' : ''}>
+                            <span>${f.label}</span>
+                        </label>
+                    `;
+                } else if (f.type === 'select') {
+                    grp.innerHTML = `
+                        <label class="form-label" for="cfg_${f.name}">${f.label}</label>
+                        <select id="cfg_${f.name}" class="select-input">
+                            ${(f.options || []).map(opt => `<option value="${opt}" ${opt === currentVal ? 'selected' : ''}>${opt.toUpperCase()}</option>`).join('')}
+                        </select>
+                    `;
+                } else {
+                    grp.innerHTML = `
+                        <label class="form-label" for="cfg_${f.name}">${f.label}</label>
+                        <input type="${f.type}" id="cfg_${f.name}" class="input-text" value="${currentVal}" placeholder="${f.placeholder || ''}">
+                    `;
+                }
+                body.appendChild(grp);
+            });
+
+            document.getElementById('configModal').classList.add('open');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.remove('open');
+            currentEditingProviderId = null;
+        }
+
+        async function submitProviderConfig() {
+            if (!currentEditingProviderId) return;
+            const p = currentProviders.find(x => x.id === currentEditingProviderId);
+            if (!p) return;
+
+            const payload = {
+                enabled: document.getElementById('cfg_enabled').checked,
             };
 
-            const status = document.getElementById('statusMessage');
-            
+            p.fields.forEach(f => {
+                const el = document.getElementById(`cfg_${f.name}`);
+                if (el) {
+                    if (f.type === 'checkbox') {
+                        payload[f.name] = el.checked;
+                    } else if (f.type === 'number') {
+                        payload[f.name] = parseInt(el.value, 10);
+                    } else {
+                        payload[f.name] = el.value.trim();
+                    }
+                }
+            });
+
             try {
-                const res = await fetch('/admin/api/config', {
+                const res = await fetch(`/admin/api/providers/${currentEditingProviderId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
+                    body: JSON.stringify(payload),
                 });
-                
-                if (res.ok) {
-                    status.className = 'alert success';
-                    status.innerText = 'Configuration SMTP sauvegardée avec succès !';
-                } else {
-                    throw new Error('Erreur serveur');
-                }
-            } catch (err) {
-                status.className = 'alert error';
-                status.innerText = 'Erreur lors de la sauvegarde SMTP.';
-            }
-        }
-
-        // --- Template Editor Logic ---
-        
-        async function loadTemplate() {
-            const templateId = document.getElementById('templateSelect').value;
-            if (!templateId) return;
-
-            try {
-                const res = await fetch(`/admin/api/templates/${templateId}`);
-                if (!res.ok) throw new Error("Template non trouvé");
                 const data = await res.json();
-                
-                const editor = document.getElementById('templateEditor');
-                editor.value = data.content;
-                editor.disabled = false;
-                
-                document.getElementById('saveTemplateBtn').disabled = false;
-                
-                const statusEl = document.getElementById('templateStatus');
-                if (data.source === 'custom') {
-                    statusEl.innerText = "⚠️ Version Personnalisée (Surcharge active)";
-                    statusEl.style.color = "#d39e00";
-                    document.getElementById('resetTemplateBtn').disabled = false;
+                if (data.success) {
+                    showToast(`Configuration de '${p.name}' mise à jour et persistée.`);
+                    closeConfigModal();
+                    loadProviders();
+                    loadOverview();
                 } else {
-                    statusEl.innerText = "ℹ️ Version Originale (Réglages d'usine)";
-                    statusEl.style.color = "#004085";
-                    document.getElementById('resetTemplateBtn').disabled = true;
+                    showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
                 }
             } catch (err) {
-                alert(err.message);
+                showToast(err.message, 'error');
             }
         }
 
-        async function saveTemplate() {
-            const templateId = document.getElementById('templateSelect').value;
-            const content = document.getElementById('templateEditor').value;
-            if (!templateId) return;
-
-            try {
-                const res = await fetch(`/admin/api/templates/${templateId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content })
-                });
-                
-                if (res.ok) {
-                    alert('Template enregistré avec succès ! (Protégé sur le volume disque)');
-                    loadTemplate(); // Reload state
-                } else {
-                    throw new Error("Erreur lors de l'enregistrement");
-                }
-            } catch (err) {
-                alert(err.message);
-            }
+        // Test Modal
+        function openTestModal(providerId) {
+            testingProviderId = providerId;
+            const p = currentProviders.find(x => x.id === providerId);
+            document.getElementById('testProviderName').textContent = p ? p.name : providerId;
+            document.getElementById('testResultBox').style.display = 'none';
+            document.getElementById('testToEmail').value = (p && p.config && p.config.fromEmail) || 'notifications@timequant.local';
+            document.getElementById('testModal').classList.add('open');
         }
 
-        async function resetTemplate() {
-            const templateId = document.getElementById('templateSelect').value;
-            if (!templateId) return;
+        function closeTestModal() {
+            document.getElementById('testModal').classList.remove('open');
+            testingProviderId = null;
+        }
 
-            if (!confirm("Voulez-vous vraiment supprimer vos modifications et restaurer le code d'origine de ce template ?")) {
+        async function submitProviderTest() {
+            if (!testingProviderId) return;
+            const toEmail = document.getElementById('testToEmail').value.trim();
+            if (!toEmail) {
+                alert('Veuillez renseigner une adresse email de test.');
                 return;
             }
 
+            const btn = document.getElementById('btnRunTest');
+            const resultBox = document.getElementById('testResultBox');
+            btn.disabled = true;
+            btn.textContent = 'Envoi en cours...';
+            resultBox.style.display = 'block';
+            resultBox.style.background = 'var(--bg-card)';
+            resultBox.style.color = 'var(--text-muted)';
+            resultBox.textContent = `Connexion au serveur ${testingProviderId} en cours...`;
+
             try {
-                const res = await fetch(`/admin/api/templates/${templateId}`, {
-                    method: 'DELETE'
+                const res = await fetch(`/admin/api/providers/${testingProviderId}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ toEmail }),
                 });
-                
-                if (res.ok) {
-                    alert('Template restauré avec succès !');
-                    loadTemplate(); // Reload state
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    resultBox.style.background = 'var(--success-bg)';
+                    resultBox.style.color = 'var(--success)';
+                    resultBox.innerHTML = `
+                        <strong>✓ Test réussi avec succès !</strong><br>
+                        Latence : ${data.latency_ms} ms<br>
+                        ID Message amont : <code style="font-family: var(--font-mono);">${data.messageId}</code>
+                    `;
+                    showToast(`Email test expédié avec succès via ${testingProviderId} !`);
+                    loadProviders();
+                    loadOverview();
                 } else {
-                    throw new Error("Erreur lors de la restauration");
+                    resultBox.style.background = 'var(--danger-bg)';
+                    resultBox.style.color = 'var(--danger)';
+                    resultBox.innerHTML = `
+                        <strong>✕ Échec de la livraison :</strong><br>
+                        ${data.error || 'Erreur inconnue'}
+                    `;
                 }
             } catch (err) {
-                alert(err.message);
+                resultBox.style.background = 'var(--danger-bg)';
+                resultBox.style.color = 'var(--danger)';
+                resultBox.textContent = `Erreur réseau : ${err.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Lancer l\'Envoi Test';
             }
         }
 
-        // Load config on page init
-        loadConfig();
+        // Routing Section
+        function selectStrategy(strat) {
+            currentStrategy = strat;
+            updateStrategyRadios();
+        }
+
+        function updateStrategyRadios() {
+            document.getElementById('radioPriority').checked = (currentStrategy === 'priority');
+            document.getElementById('radioRoundRobin').checked = (currentStrategy === 'round_robin');
+            document.getElementById('cardStrategyPriority').classList.toggle('selected', currentStrategy === 'priority');
+            document.getElementById('cardStrategyRoundRobin').classList.toggle('selected', currentStrategy === 'round_robin');
+        }
+
+        function renderRoutingOrder() {
+            const list = document.getElementById('routingOrderList');
+            list.innerHTML = '';
+
+            currentOrder.forEach((id, idx) => {
+                const p = currentProviders.find(x => x.id === id);
+                const item = document.createElement('div');
+                item.className = 'order-item';
+                item.innerHTML = `
+                    <div class="order-item-left">
+                        <div class="order-num">${idx + 1}</div>
+                        <div>
+                            <div class="order-item-title">${p ? p.name : id}</div>
+                            <div style="font-size: 11px; color: var(--text-faint);">${p ? (p.enabled ? '🟢 Prêt' : '⚪ Inactif') : ''}</div>
+                        </div>
+                    </div>
+                    <div class="order-btns">
+                        <button class="order-btn" onclick="moveProvider(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Monter">▲</button>
+                        <button class="order-btn" onclick="moveProvider(${idx}, 1)" ${idx === currentOrder.length - 1 ? 'disabled' : ''} title="Descendre">▼</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function moveProvider(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= currentOrder.length) return;
+            const temp = currentOrder[index];
+            currentOrder[index] = currentOrder[newIndex];
+            currentOrder[newIndex] = temp;
+            renderRoutingOrder();
+        }
+
+        async function saveRoutingConfig() {
+            try {
+                const res = await fetch('/admin/api/routing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        strategy: currentStrategy,
+                        order: currentOrder,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Stratégie de routage enregistrée et appliquée immédiatement.');
+                    loadProviders();
+                    loadOverview();
+                } else {
+                    showToast(data.error || 'Erreur lors de l\'enregistrement', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // Logs Section
+        async function loadLogs(offset = 0) {
+            logsOffset = Math.max(0, offset);
+            const status = document.getElementById('logStatusSelect').value;
+            const search = document.getElementById('logSearchInput').value.trim();
+
+            const params = new URLSearchParams({
+                limit: logsLimit,
+                offset: logsOffset,
+                status,
+                search,
+            });
+
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Chargement...</td></tr>';
+
+            try {
+                const res = await fetch(`/admin/api/logs?${params.toString()}`);
+                const data = await res.json();
+                
+                if (!data.items || data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">Aucun email trouvé correspondant aux filtres.</td></tr>';
+                    document.getElementById('paginationInfo').textContent = 'Affichage 0 sur 0';
+                    document.getElementById('btnPrevLogs').disabled = true;
+                    document.getElementById('btnNextLogs').disabled = true;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                data.items.forEach(log => {
+                    const tr = document.createElement('tr');
+                    const dateFormatted = new Date(log.created_at).toLocaleString();
+                    tr.innerHTML = `
+                        <td style="color: var(--text-faint); font-family: var(--font-mono); font-size: 12px;">${dateFormatted}</td>
+                        <td>
+                            <div style="font-weight: 600;">${log.recipient_email}</div>
+                            <div style="font-size: 11px; color: var(--text-faint);">${log.recipient_name || ''}</div>
+                        </td>
+                        <td><code style="font-family: var(--font-mono); font-size: 12px; color: var(--primary);">${log.template_id}</code></td>
+                        <td><span class="badge-status ${log.status}">${log.status}</span></td>
+                        <td><span style="font-weight: 600;">${log.provider_used || '—'}</span></td>
+                        <td>${log.attempts || 1}</td>
+                        <td>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-secondary btn-sm" onclick='showLogDetail(${JSON.stringify(log).replace(/'/g, "&#39;")})'>Détails</button>
+                                ${log.status === 'failed' ? `<button class="btn btn-primary btn-sm" onclick="retryEmail('${log.id}')">Relancer</button>` : ''}
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('paginationInfo').textContent = `Affichage de ${logsOffset + 1} à ${Math.min(logsOffset + logsLimit, data.total)} sur ${data.total}`;
+                document.getElementById('btnPrevLogs').disabled = (logsOffset === 0);
+                document.getElementById('btnNextLogs').disabled = (logsOffset + logsLimit >= data.total);
+            } catch (err) {
+                console.error('Erreur chargement logs', err);
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 20px;">Erreur de chargement des journaux.</td></tr>';
+            }
+        }
+
+        function changeLogsPage(direction) {
+            loadLogs(logsOffset + (direction * logsLimit));
+        }
+
+        async function retryEmail(id) {
+            try {
+                const res = await fetch(`/admin/api/logs/${id}/retry`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Email réinséré dans la file de distribution.');
+                    loadLogs(logsOffset);
+                    loadOverview();
+                } else {
+                    showToast(data.error || 'Erreur lors de la réinsertion', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function showLogDetail(log) {
+            const body = document.getElementById('logDetailBody');
+            body.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+                    <div><strong>ID Message :</strong> <code style="font-family: var(--font-mono);">${log.id}</code></div>
+                    <div><strong>Clé d'Idempotence :</strong> <code style="font-family: var(--font-mono);">${log.idempotency_key || 'N/A'}</code></div>
+                    <div><strong>Destinataire :</strong> ${log.recipient_email} (${log.recipient_name || 'Sans nom'})</div>
+                    <div><strong>Gabarit utilisé :</strong> ${log.template_id}</div>
+                    <div><strong>Statut :</strong> <span class="badge-status ${log.status}">${log.status}</span></div>
+                    <div><strong>Fournisseur d'expédition :</strong> ${log.provider_used || 'Aucun (en file)'}</div>
+                    <div><strong>Message ID Upstream :</strong> <code>${log.message_id || 'N/A'}</code></div>
+                    <div><strong>Nombre de tentatives :</strong> ${log.attempts || 1}</div>
+                    ${log.error_message ? `<div style="background: var(--danger-bg); color: var(--danger); padding: 12px; border-radius: var(--radius-sm);"><strong>Erreur signalée :</strong><br>${log.error_message}</div>` : ''}
+                    <div>
+                        <strong>Métadonnées & Payload variables :</strong>
+                        <pre style="background: var(--bg-input); padding: 12px; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 12px; overflow-x: auto; max-height: 200px; margin-top: 4px;">${JSON.stringify(typeof log.metadata_json === 'string' ? JSON.parse(log.metadata_json) : (log.metadata_json || {}), null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+            document.getElementById('logDetailModal').classList.add('open');
+        }
+
+        function closeLogModal() {
+            document.getElementById('logDetailModal').classList.remove('open');
+        }
+
+        // Templates Section
+        async function loadSelectedTemplate() {
+            const id = document.getElementById('templateSelector').value;
+            if (!id) return;
+
+            const editor = document.getElementById('templateEditor');
+            editor.disabled = true;
+            editor.value = 'Chargement du template...';
+
+            // Show variables
+            const pillsContainer = document.getElementById('templateVariablesPills');
+            pillsContainer.innerHTML = '';
+            const vars = TEMPLATE_VARS_MAP[id] || [];
+            vars.forEach(v => {
+                const pill = document.createElement('span');
+                pill.className = 'var-pill';
+                pill.textContent = v;
+                pill.onclick = () => insertVariableAtCursor(v);
+                pillsContainer.appendChild(pill);
+            });
+            document.getElementById('templateMetaBox').style.display = 'block';
+
+            try {
+                const res = await fetch(`/admin/api/templates/${id}`);
+                const data = await res.json();
+                editor.value = data.content || '';
+                editor.disabled = false;
+                document.getElementById('btnSaveTemplate').disabled = false;
+                document.getElementById('btnResetTemplate').disabled = !data.isCustom;
+                updateLivePreview();
+            } catch (err) {
+                editor.value = `Erreur: ${err.message}`;
+            }
+        }
+
+        function insertVariableAtCursor(text) {
+            const editor = document.getElementById('templateEditor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            editor.value = editor.value.substring(0, start) + text + editor.value.substring(end);
+            editor.focus();
+            editor.selectionStart = editor.selectionEnd = start + text.length;
+            updateLivePreview();
+        }
+
+        function updateLivePreview() {
+            const content = document.getElementById('templateEditor').value;
+            const iframe = document.getElementById('templatePreviewIframe');
+            // Mock dynamic variables
+            let previewHtml = content
+                .replace(/\{\{user_name\}\}/g, 'Dr. Aris Vance')
+                .replace(/\{\{otp_code\}\}/g, '849201')
+                .replace(/\{\{code\}\}/g, '849201')
+                .replace(/\{\{expiry_minutes\}\}/g, '10')
+                .replace(/\{\{simulation_name\}\}/g, 'Quantum Lattice Optimization #4')
+                .replace(/\{\{job_id\}\}/g, 'hpc_run_99248')
+                .replace(/\{\{wall_time_s\}\}/g, '142')
+                .replace(/\{\{email\}\}/g, 'chercheur@timequant.org');
+
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(previewHtml);
+            doc.close();
+        }
+
+        async function saveCurrentTemplate() {
+            const id = document.getElementById('templateSelector').value;
+            const content = document.getElementById('templateEditor').value;
+            if (!id) return;
+
+            try {
+                const res = await fetch(`/admin/api/templates/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Gabarit personnalisé enregistré.');
+                    document.getElementById('btnResetTemplate').disabled = false;
+                } else {
+                    showToast(data.error || 'Erreur', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function resetCurrentTemplate() {
+            const id = document.getElementById('templateSelector').value;
+            if (!id || !confirm('Restaurer le gabarit par défaut d\'origine ?')) return;
+
+            try {
+                const res = await fetch(`/admin/api/templates/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Gabarit restauré à sa version système d\'origine.');
+                    loadSelectedTemplate();
+                } else {
+                    showToast(data.error || 'Erreur', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // Global Refresh
+        function refreshAll() {
+            loadOverview();
+            loadProviders();
+            showToast('Données et métriques actualisées.');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOverview();
+            loadProviders();
+            // Periodic polling every 30 seconds
+            setInterval(loadOverview, 30000);
+        });
     </script>
 </body>
 </html>

@@ -10,6 +10,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - custom_templates:/app/data
+      - ./src:/app/src
     restart: unless-stopped
 
 volumes:
