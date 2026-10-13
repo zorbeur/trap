@@ -2,22 +2,71 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Vérification de votre compte TimeQuant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code de vérification - TimeQuant Platform</title>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <h2>Bienvenue {{ user_name }} !</h2>
-    
-    <p>Merci d'avoir créé un compte sur TimeQuant ({{ organization_domain }}). Pour activer votre compte et accéder à la plateforme, veuillez vérifier votre adresse e-mail en cliquant sur le lien ci-dessous :</p>
-    
-    <p style="margin: 30px 0;">
-        <a href="{{ verification_link }}" style="padding: 12px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Vérifier mon adresse e-mail</a>
-    </p>
+<body style="margin: 0; padding: 0; background-color: #0b0f17; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0b0f17; padding: 40px 10px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background: linear-gradient(145deg, #131b2e, #0f172a); border: 1px solid rgba(79, 172, 254, 0.25); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 28px 32px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                            <table width="100%">
+                                <tr>
+                                    <td>
+                                        <span style="font-size: 20px; font-weight: 700; color: #4facfe; letter-spacing: 0.5px;">⚛️ TimeQuant</span>
+                                        <span style="font-size: 13px; color: #94a3b8; margin-left: 8px;">Quantum & Materials IDE</span>
+                                    </td>
+                                    <td align="right">
+                                        <span style="font-size: 11px; background: rgba(79, 172, 254, 0.15); color: #4facfe; padding: 4px 10px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(79, 172, 254, 0.3);">VÉRIFICATION</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-    <p>Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :<br>
-    <a href="{{ verification_link }}">{{ verification_link }}</a></p>
-    
-    <p>Si vous n'êtes pas à l'origine de cette inscription, veuillez ignorer cet e-mail.</p>
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 36px 32px;">
+                            <h1 style="font-size: 22px; font-weight: 600; color: #f8fafc; margin: 0 0 16px 0;">
+                                Bienvenue, {{ user_name or 'Chercheur' }} !
+                            </h1>
+                            <p style="font-size: 14.5px; line-height: 1.6; color: #cbd5e1; margin: 0 0 24px 0;">
+                                Merci d'avoir rejoint la plateforme <strong>TimeQuant</strong>. Pour activer votre compte et sécuriser votre accès, voici votre code de vérification à 6 chiffres :
+                            </p>
 
-    <p>Cordialement,<br>L'équipe TimeQuant</p>
+                            <!-- OTP Code Box -->
+                            <div style="background: rgba(10, 15, 26, 0.8); border: 1px solid rgba(79, 172, 254, 0.4); border-radius: 10px; padding: 22px; text-align: center; margin: 28px 0;">
+                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 8px; font-weight: 600;">Code de Sécurité à usage unique</div>
+                                <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #4facfe; font-family: 'Courier New', Courier, monospace; text-shadow: 0 0 20px rgba(79, 172, 254, 0.4);">
+                                    {{ otp_code or code or '123456' }}
+                                </div>
+                                <div style="font-size: 12px; color: #f59e0b; margin-top: 10px; display: inline-flex; align-items: center; gap: 4px;">
+                                    ⏱️ Ce code expire dans <strong>{{ expiry_minutes or '10' }} minutes</strong>.
+                                </div>
+                            </div>
+
+                            <p style="font-size: 13.5px; line-height: 1.5; color: #94a3b8; margin: 0 0 16px 0;">
+                                Entrez ce code directement dans la fenêtre de confirmation sur votre navigateur. Ne partagez ce code avec personne.
+                            </p>
+
+                            <p style="font-size: 12px; color: #64748b; line-height: 1.4; margin: 24px 0 0 0; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+                                Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail en toute sécurité. Aucun compte ne sera activé sans ce code.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 32px; background: rgba(10, 15, 26, 0.9); border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 11.5px; color: #64748b; text-align: center;">
+                            © 2026 TimeQuant Platform · Simulation Quantique & Modélisation de Matériaux
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

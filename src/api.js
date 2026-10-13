@@ -6,12 +6,17 @@ const basicAuth = require('express-basic-auth');
 const config = require('./config');
 const { emailQueue } = require('./queue');
 const { connection: redis } = require('./redis');
-const { SendTemplatedEmailSchema } = require('./schemas');
+const { SendTemplatedEmailSchema, GenerateOtpSchema, VerifyOtpSchema } = require('./schemas');
 const logger = require('./logger');
 const { createBullBoard } = require('@bull-board/api');
 const { BullMQAdapter } = require('@bull-board/api/bullMQAdapter');
 const { ExpressAdapter } = require('@bull-board/express');
 const metrics = require('./metrics');
+const { getPool } = require('./db');
+const { generateOtp, verifyOtp, OTP_EXPIRE_MINUTES } = require('./otp');
+const providerManager = require('./providers');
+const path = require('path');
+const fs = require('fs');
 
 const api = express();
 
@@ -36,62 +41,17 @@ api.get('/metrics', async (req, res) => {
 });
 
 const authMiddleware = basicAuth({
-  users: { [process.env.ADMIN_USER || 'admin']: process.env.ADMIN_PASSWORD || 'supersecret' },
+  users: { [process.env.ADMIN_USER || 'admin']: process.env.ADMIN_PASSWORD || 'timequant_admin_secret_2026' },
   challenge: true,
 });
 
 // Mount Bull Board UI with Basic Auth protection
 api.use('/admin/queues', authMiddleware, serverAdapter.getRouter());
 
-const path = require('path');
-
 // Admin Settings UI Route
 api.get('/admin/settings', authMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'templates', 'admin_settings.html'));
 });
-
-// Admin Settings API Routes
-api.get('/admin/api/config', authMiddleware, async (req, res) => {
-  try {
-    const data = await redis.get('config:email_provider');
-    if (data) {
-      res.json(JSON.parse(data));
-    } else {
-      res.json({
-        host: config.smtp.host,
-        port: config.smtp.port,
-        secure: config.smtp.secure,
-        user: config.smtp.user,
-        pass: '', // Do not leak password via API if relying on env
-        senderName: 'TimeQuant Platform',
-        senderEmail: 'notifications@timequant.org'
-      });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-api.post('/admin/api/config', authMiddleware, async (req, res) => {
-  try {
-    const newConfig = {
-      senderName: req.body.senderName,
-      senderEmail: req.body.senderEmail,
-      host: req.body.host,
-      port: req.body.port,
-      user: req.body.user,
-      pass: req.body.pass,
-      secure: req.body.secure,
-    };
-    await redis.set('config:email_provider', JSON.stringify(newConfig));
-    logger.info('SMTP provider configuration updated by administrator');
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-const fs = require('fs');
 
 // Utility to validate templateId and prevent path traversal
 const isValidTemplateId = (id) => /^[a-zA-Z0-9_]+$/.test(id);
@@ -101,19 +61,16 @@ api.get('/admin/api/templates/:id', authMiddleware, (req, res) => {
   const templateId = req.params.id;
   if (!isValidTemplateId(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
 
-  const fileName = `${templateId}.html`;
-  const customPath = path.join(__dirname, '..', 'data', 'templates', fileName);
-  const defaultPath = path.join(__dirname, 'templates', fileName);
+  const customPath = path.join(__dirname, '..', 'data', 'templates', `${templateId}.html`);
+  const defaultPath = path.join(__dirname, 'templates', `${templateId}.html`);
 
   try {
     if (fs.existsSync(customPath)) {
-      const content = fs.readFileSync(customPath, 'utf-8');
-      res.json({ content, source: 'custom' });
+      return res.json({ id: templateId, isCustom: true, content: fs.readFileSync(customPath, 'utf-8') });
     } else if (fs.existsSync(defaultPath)) {
-      const content = fs.readFileSync(defaultPath, 'utf-8');
-      res.json({ content, source: 'default' });
+      return res.json({ id: templateId, isCustom: false, content: fs.readFileSync(defaultPath, 'utf-8') });
     } else {
-      res.status(404).json({ error: 'Template not found' });
+      return res.status(404).json({ error: 'Template not found' });
     }
   } catch (err) {
     res.status(500).json({ error: 'Error reading template' });
@@ -172,46 +129,70 @@ const authenticate = (req, res, next) => {
   next();
 };
 
-api.post('/v1/emails/send-templated', authenticate, async (req, res) => {
+// ── Providers Information ─────────────────────────────────────────
+api.get('/v1/providers', authenticate, (req, res) => {
+  const available = providerManager.getAvailableProviders().map(p => ({
+    name: p.name,
+    available: true,
+  }));
+  res.json({
+    strategy: providerManager.strategy,
+    configured_order: providerManager.order,
+    active_providers: available,
+  });
+});
+
+// ── Send Templated Email Endpoint ──────────────────────────────────
+api.post(['/v1/emails/send-templated', '/v1/send-templated'], authenticate, async (req, res) => {
+
   try {
-    const idempotencyKey = req.headers['idempotency-key'];
-    if (!idempotencyKey) {
-      return res.status(400).json({ error: 'Missing Idempotency-Key header' });
+    const idempotencyKey = req.headers['idempotency-key'] || `idemp_${uuidv4()}`;
+    const pool = getPool();
+
+    // 1. Check idempotency in MySQL
+    if (idempotencyKey) {
+      const [existing] = await pool.query(
+        'SELECT id, status, provider_used, message_id, created_at FROM emails WHERE idempotency_key = ? LIMIT 1;',
+        [idempotencyKey]
+      );
+      if (existing.length > 0) {
+        const row = existing[0];
+        return res.status(202).json({
+          status: row.status,
+          message_id: row.id,
+          provider_used: row.provider_used,
+          idempotency_key: idempotencyKey,
+          created_at: row.created_at,
+          cached: true,
+        });
+      }
     }
 
-    // Check idempotency in Redis
-    const cacheKey = `idempotency:email:${idempotencyKey}`;
-    const cachedResult = await redis.get(cacheKey);
-    
-    if (cachedResult) {
-      // Already processed, return identical response
-      return res.status(202).json(JSON.parse(cachedResult));
-    }
-
-    // Validate payload
+    // 2. Validate payload
     const parsedBody = SendTemplatedEmailSchema.parse(req.body);
 
-    // Rule 1: Skip if template is simulation_completed and calculation time < 6h (21600s)
-    if (parsedBody.template_id === 'simulation_completed') {
+    // Optional duration filter (default 0s, skips only if explicitly set in env)
+    const minWallTime = parseInt(process.env.MIN_SIMULATION_DURATION_S || '0', 10);
+    if (parsedBody.template_id === 'simulation_completed' && minWallTime > 0) {
       const wallTime = parsedBody.template_data?.wall_time_s;
-      if (typeof wallTime === 'number' && wallTime < 21600) {
-        logger.info(`Skipping email to ${parsedBody.to.email} - calculation time ${wallTime}s is less than 6h`);
+      if (typeof wallTime === 'number' && wallTime < minWallTime) {
+        logger.info(`Skipping email to ${parsedBody.to.email} - duration ${wallTime}s is under ${minWallTime}s threshold`);
         metrics.emailsSkippedCounter.labels('calculation_too_short').inc();
         return res.status(202).json({
           status: 'skipped',
-          reason: 'Calculation duration under 6h threshold',
+          reason: `Calculation duration under ${minWallTime}s threshold`,
           idempotency_key: idempotencyKey,
         });
       }
     }
 
-    // Rule 2: Generic Rate Limiting per recipient (max 10 per hour)
+    // 3. Generic Rate Limiting per recipient in Redis (max 50 per hour)
     const rateLimitKey = `ratelimit:email:${parsedBody.to.email}`;
     const sentCount = await redis.incr(rateLimitKey);
     if (sentCount === 1) {
       await redis.expire(rateLimitKey, 3600); // 1 hour window
     }
-    if (sentCount > 10) {
+    if (sentCount > 50) {
       logger.warn(`Rate limiting email to ${parsedBody.to.email}`);
       metrics.emailsSkippedCounter.labels('rate_limited').inc();
       return res.status(429).json({
@@ -223,118 +204,229 @@ api.post('/v1/emails/send-templated', authenticate, async (req, res) => {
     const messageId = `msg_${uuidv4()}`;
     const createdAt = new Date().toISOString();
 
+    // 4. Persist immediately into MySQL 'emails' table (status: 'queued')
+    await pool.query(`
+      INSERT INTO emails (id, idempotency_key, recipient_email, recipient_name, template_id, status, metadata_json)
+      VALUES (?, ?, ?, ?, ?, 'queued', ?);
+    `, [
+      messageId,
+      idempotencyKey,
+      parsedBody.to.email,
+      parsedBody.to.name || null,
+      parsedBody.template_id,
+      JSON.stringify(parsedBody.metadata || {}),
+    ]);
+
     // Prepare response
     const responsePayload = {
       status: 'queued',
       message_id: messageId,
+      email_id: messageId,
       idempotency_key: idempotencyKey,
       created_at: createdAt,
     };
 
-    // Store in Redis (expires in 24 hours = 86400 seconds)
-    await redis.set(cacheKey, JSON.stringify(responsePayload), 'EX', 86400);
 
-    // Enqueue job
+    // 5. Enqueue job into BullMQ
+    parsedBody.id = messageId; // attach database id so worker updates this exact row
     await emailQueue.add(messageId, {
       messageId,
       payload: parsedBody,
     }, {
-      jobId: messageId, // Ensure BullMQ doesn't create duplicate jobs for the same messageId
+      jobId: messageId,
+      priority: parsedBody.priority === 'high' ? 1 : (parsedBody.priority === 'low' ? 5 : 3),
     });
 
     metrics.emailsQueuedCounter.inc();
-
     return res.status(202).json(responsePayload);
 
   } catch (error) {
     if (error.name === 'ZodError') {
       return res.status(400).json({ error: 'Validation Error', details: error.errors });
     }
-    // Handle specific payload too large
     if (error.type === 'entity.too.large') {
       return res.status(413).json({ error: 'Payload Too Large' });
     }
     logger.error({ err: error }, 'API Error');
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 });
 
-// Delivery Webhook Endpoint
-api.post('/v1/webhooks/delivery', async (req, res) => {
-  // Generic webhook receiver for SaaS providers
-  const payload = req.body;
-  const events = Array.isArray(payload) ? payload : [payload];
+// ── One-Time Password (OTP) Endpoints ──────────────────────────────
 
-  for (const event of events) {
-    // Attempt to extract common fields
-    const messageId = event.message_id || event.MessageId || event.sg_message_id;
-    const type = event.event || event.eventType || event.type; // e.g., 'bounce', 'delivered'
-    
-    if (messageId && type) {
-      metrics.webhooksReceivedCounter.labels(type).inc();
-      
-      if (['bounce', 'bounced', 'hard_bounce', 'dropped', 'spamreport'].includes(type.toLowerCase())) {
-        logger.warn(`Webhook: Message ${messageId} bounced/dropped`);
-        await redis.set(`status:email:${messageId}`, 'bounced', 'EX', 86400 * 30); // keep for 30 days
-      } else if (['delivered', 'delivered'].includes(type.toLowerCase())) {
-        await redis.set(`status:email:${messageId}`, 'delivered_webhook', 'EX', 86400 * 30);
-      }
+// Generate and Send OTP verification code
+api.post('/v1/otp/generate-and-send', authenticate, async (req, res) => {
+  try {
+    const { email, user_name, purpose } = GenerateOtpSchema.parse(req.body);
+    const pool = getPool();
+
+    // 1. Generate OTP (persisted hashed in MySQL)
+    const otpData = await generateOtp(email, purpose);
+
+    // 2. Select appropriate template based on purpose
+    let templateId = 'email_verification';
+    if (purpose === 'reset_password') {
+      templateId = 'password_reset';
     }
-  }
 
-  res.json({ success: true });
+    const messageId = `msg_otp_${uuidv4()}`;
+    const idempotencyKey = `idemp_otp_${otpData.otpId}`;
+
+    const templateData = {
+      user_name: user_name || 'Chercheur',
+      email: email,
+      otp_code: otpData.code,
+      code: otpData.code,
+      expiry_minutes: otpData.expiresMinutes,
+      purpose,
+    };
+
+    // 3. Record in MySQL emails table
+    await pool.query(`
+      INSERT INTO emails (id, idempotency_key, recipient_email, recipient_name, template_id, status, metadata_json)
+      VALUES (?, ?, ?, ?, ?, 'queued', ?);
+    `, [
+      messageId,
+      idempotencyKey,
+      email,
+      user_name || null,
+      templateId,
+      JSON.stringify({ otp_id: otpData.otpId, purpose }),
+    ]);
+
+    // 4. Enqueue high-priority delivery job
+    await emailQueue.add(messageId, {
+      messageId,
+      payload: {
+        id: messageId,
+        to: { email, name: user_name },
+        template_id: templateId,
+        template_data: templateData,
+        priority: 'high',
+      },
+    }, {
+      jobId: messageId,
+      priority: 1, // highest priority
+    });
+
+    return res.status(202).json({
+      status: 'queued',
+      message_id: messageId,
+      email,
+      purpose,
+      expires_minutes: otpData.expiresMinutes,
+      cooldown_seconds: 60,
+    });
+
+  } catch (error) {
+    if (error.cooldown) {
+      return res.status(429).json({
+        error: 'Cooldown active',
+        message: error.message,
+        remaining_seconds: error.remainingSeconds,
+      });
+    }
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ error: 'Validation Error', details: error.errors });
+    }
+    logger.error({ err: error }, '[API] OTP generation failed');
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+  }
 });
 
+// Verify OTP code submitted by user
+api.post('/v1/otp/verify', authenticate, async (req, res) => {
+  try {
+    const { email, code, purpose } = VerifyOtpSchema.parse(req.body);
+    const result = await verifyOtp(email, code, purpose);
+    if (!result.valid) {
+      return res.status(400).json(result);
+    }
+    return res.json(result);
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ error: 'Validation Error', details: error.errors });
+    }
+    logger.error({ err: error }, '[API] OTP verification error');
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+  }
+});
+
+// ── Delivery Status Endpoint ───────────────────────────────────────
 api.get('/v1/emails/:message_id/status', authenticate, async (req, res) => {
   const { message_id } = req.params;
-  
-  // 1. Check if a webhook already marked it as bounced or delivered
-  const webhookStatus = await redis.get(`status:email:${message_id}`);
-  
-  // 2. Fallback to BullMQ status
-  const job = await emailQueue.getJob(message_id);
-  
-  if (!job && !webhookStatus) {
-    return res.status(404).json({ error: 'Message not found' });
-  }
+  const pool = getPool();
 
-  let status = 'queued';
-  
-  if (webhookStatus) {
-    status = webhookStatus;
-  } else if (job) {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, status, provider_used, message_id as upstream_id, attempts, error_message, created_at, updated_at FROM emails WHERE id = ? OR idempotency_key = ? LIMIT 1;',
+      [message_id, message_id]
+    );
+
+    if (rows.length > 0) {
+      const row = rows[0];
+      return res.json({
+        message_id: row.id,
+        status: row.status,
+        provider_used: row.provider_used,
+        upstream_id: row.upstream_id,
+        attempts: row.attempts,
+        error_message: row.error_message,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      });
+    }
+
+    // Fallback to BullMQ
+    const job = await emailQueue.getJob(message_id);
+    if (!job) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
     const state = await job.getState();
+    let status = 'queued';
     if (state === 'completed') status = 'delivered';
     else if (state === 'failed') status = 'failed';
     else if (state === 'active') status = 'sending';
-    else if (state === 'delayed') status = 'queued';
-  }
 
-  res.json({
-    message_id,
-    status,
-    delivered_at: (status.includes('delivered') && job) ? new Date(job.finishedOn).toISOString() : null,
-    attempts: job ? job.attemptsMade : null,
-  });
+    return res.json({
+      message_id,
+      status,
+      attempts: job.attemptsMade,
+    });
+
+  } catch (err) {
+    logger.error({ err }, '[API] Status query failed');
+    return res.status(500).json({ error: 'Database error' });
+  }
 });
 
+// ── Health Check Endpoint ──────────────────────────────────────────
 api.get('/v1/health', async (req, res) => {
   try {
     const counts = await emailQueue.getJobCounts('wait', 'active', 'delayed', 'failed');
     const queue_backlog = counts.wait + counts.delayed;
-    
+
     // Check Redis connection
     await redis.ping();
 
+    // Check MySQL connection
+    const pool = getPool();
+    await pool.query('SELECT 1;');
+
+    const activeProviders = providerManager.getAvailableProviders().map(p => p.name);
+
     res.json({
       status: 'healthy',
+      database: 'mysql_connected',
       queue_backlog,
-      upstream_provider: 'operational' // Mocked for now, could check SMTP connection
+      active_providers: activeProviders,
+      routing_strategy: providerManager.strategy,
     });
   } catch (err) {
     res.status(503).json({
       status: 'unhealthy',
-      error: err.message
+      error: err.message,
     });
   }
 });
