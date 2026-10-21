@@ -25,18 +25,66 @@ Ce dépôt contient le microservice de messagerie officiel de la plateforme **Ti
 
 ---
 
-## 🚀 Démarrage Rapide (Déploiement)
+## 🚀 Démarrage Rapide (Déploiement & Développement)
 
-Le service est conçu pour être déployé très simplement via un seul conteneur regroupant l'API, le Worker et la base de données locale Redis.
+Le service est conçu pour être déployé très simplement soit via Docker (recommandé en production, incluant l'API, le Worker et la base de données locale Redis), soit directement en Node.js pour le développement.
 
-1. Clonez ce dépôt.
-2. (Optionnel) Créez un fichier `.env` à la racine si vous souhaitez surcharger les variables par défaut.
-3. Lancez le service :
-   ```bash
-   docker compose up --build -d
-   ```
+### Méthode 1 : Démarrage Production via Docker Compose (Recommandé)
+```bash
+# 1. Aller dans le dossier du microservice
+cd /home/amos/stage/trap
 
+# 2. Lancer le conteneur tout-en-un (API + Worker BullMQ + Redis interne)
+docker compose up --build -d
+
+# 3. Vérifier les logs et la santé du service :
+docker compose logs -f
+curl http://localhost:3000/health
+```
 L'API est désormais disponible sur `http://localhost:3000`.
+
+### Méthode 2 : Démarrage Local Node.js (Développement)
+```bash
+cd /home/amos/stage/trap
+
+# Installer les dépendances
+npm install
+
+# Assurez-vous qu'une instance Redis locale est active (ex: redis-server sur le port 6379)
+# Lancer en mode développement avec rechargement automatique :
+npm run dev
+
+# Ou lancer en mode production standard :
+npm start
+```
+
+### Exécution des Tests d'Intégration
+```bash
+cd /home/amos/stage/trap
+
+# Exécuter le banc de test d'intégration complet (Validation API, File BullMQ et Envoi SMTP) :
+./test_integration.sh
+```
+
+---
+
+## 🔗 Intégration avec TimeQuant Platform
+
+Le serveur principal TimeQuant Platform (`timequant-platform`) communique automatiquement avec ce microservice pour notifier les chercheurs.
+
+### Variables à renseigner dans `timequant-platform/.env` :
+```env
+# URL du microservice de mailing TimeQuant
+MAILER_URL="http://localhost:3000"
+
+# Jeton d'authentification Bearer partagé
+TQ_EMAIL_SERVICE_API_KEY="dev-secret-key"
+```
+
+### Événements Déclencheurs dans la Plateforme :
+1. **Création de Compte Chercheur** : Envoi de l'e-mail de confirmation d'adresse et de bienvenue (`template_id: welcome_verification`).
+2. **Réinitialisation de Mot de Passe** : Lien sécurisé à usage unique avec expiration 15 minutes (`template_id: password_reset`).
+3. **Calcul Longue Durée Terminé** : Déclenché par les Celery Workers pour tout calcul dont le temps de simulation dépasse 6 heures (`wall_time_s >= 21600`), incluant le résumé des scalaires physiques calculés et le lien vers le studio (`template_id: simulation_completed`).
 
 ---
 
